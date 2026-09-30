@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from visagecam.masks.designs import EYE_L, EYE_R, NOSE, SIZE
+from visagecam.masks.geometry import EYE_L, EYE_R, NOSE, SIZE
 from visagecam.masks.painter import Canvas, Color, linear, radial
 from visagecam.masks.shapes import circle, dashed, noise_shape, ring, rrect, tapered
 

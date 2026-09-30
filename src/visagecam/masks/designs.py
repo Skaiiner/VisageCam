@@ -3,38 +3,8 @@ from typing import Callable
 
 import numpy as np
 
-from visagecam.masks.model import Anchor
+from visagecam.masks.geometry import ANCHORS, EYE_L, EYE_R, SIZE, outward  # noqa: F401
 from visagecam.masks.painter import Canvas, Color, linear, radial
-
-SIZE = 1024
-
-EYE_L = (397.0, 430.0)
-EYE_R = (627.0, 430.0)
-NOSE = (512.0, 614.0)
-MOUTH = (512.0, 759.0)
-CHIN = (512.0, 855.0)
-FOREHEAD = (512.0, 177.0)
-
-ANCHORS = [
-    Anchor("eye_left", (33, 133, 159, 145), EYE_L),
-    Anchor("eye_right", (362, 263, 386, 374), EYE_R),
-    Anchor("nose_tip", (1,), NOSE),
-    Anchor("mouth", (13, 14), MOUTH),
-    Anchor("chin", (152,), CHIN),
-    Anchor("forehead", (10,), FOREHEAD),
-]
-
-
-def mirror(points):
-    return [(SIZE - x, y) for x, y in points]
-
-
-def outward(cx: float, cy: float, bias: float = 0.35) -> Callable[[float, float], float]:
-    def fn(x: float, y: float) -> float:
-        return math.atan2(y - cy + bias * 90, x - cx)
-
-    return fn
-
 
 def fox() -> np.ndarray:
     c = Canvas(SIZE)
@@ -111,6 +81,8 @@ def fox() -> np.ndarray:
 
 
 from visagecam.masks.designs_more import alien, bear, cat_astronaut, dragon, robot  # noqa: E402
+from visagecam.masks.designs_scifi import DESIGNS_SCIFI  # noqa: E402
+from visagecam.masks.half_masks import DESIGNS_HALF  # noqa: E402
 
 DESIGNS: dict[str, tuple[str, Callable[[], np.ndarray]]] = {
     "fox": ("Zorro", fox),
@@ -119,4 +91,6 @@ DESIGNS: dict[str, tuple[str, Callable[[], np.ndarray]]] = {
     "cat_astronaut": ("Gato astronauta", cat_astronaut),
     "alien": ("Alienigena", alien),
     "bear": ("Oso vintage", bear),
+    **DESIGNS_SCIFI,
+    **DESIGNS_HALF,
 }

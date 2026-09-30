@@ -4,8 +4,8 @@ Camara virtual para Windows 10 y 11 escrita en Python. Captura tu webcam, detect
 
 ## Caracteristicas
 
-- **Filtros de cara**: seis mascaras incluidas que siguen tus gestos (boca, mejillas, cejas) y cualquier imagen propia: si tiene cara se deforma sobre la tuya con ajuste de color.
-- **Accesorios**: sombreros, corona, gafas, bigote, auriculares y los tuyos, combinables y con ajuste individual.
+- **Filtros de cara**: 14 mascaras incluidas (animales, ciencia ficcion y antifaces de mascarada que dejan la boca libre) que siguen tus gestos (boca, mejillas, cejas), y cualquier imagen propia: si tiene cara se deforma sobre la tuya con ajuste de color.
+- **Accesorios**: 10 accesorios incluidos (sombreros, corona, gorro, corona de flores, gafas, monoculo, bigote, panuelo, auriculares) y los tuyos, combinables y con ajuste individual.
 - **Belleza**: piel suave, luminosidad, labios y dientes.
 - **Fondo**: desenfoque o imagen propia por segmentacion.
 - **Calidad**: captura a 1080p reescalada a 720p, reduccion de ruido temporal y mejora de imagen. 30 fps a 720p.

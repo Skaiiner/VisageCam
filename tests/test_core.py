@@ -69,8 +69,9 @@ def test_mouth_ratio_reacts_to_opening():
 
 
 def test_generated_assets_complete(library):
-    assert [m.mask_id for m in library.all()[:6]] == generator.MASK_ORDER
-    assert [m.mask_id for m in library.accessories()[:6]] == generator.ACCESSORY_ORDER
+    assert [m.mask_id for m in library.all()[: len(generator.MASK_ORDER)]] == generator.MASK_ORDER
+    assert [m.mask_id for m in library.accessories()[: len(generator.ACCESSORY_ORDER)]] == generator.ACCESSORY_ORDER
+    assert len(generator.MASK_ORDER) >= 14 and len(generator.ACCESSORY_ORDER) >= 10
     for mask in library.all():
         assert mask.image.shape[2] == 4 and mask.anchors
     data = json.loads((library.dirs[("mask", True)] / "fox.json").read_text(encoding="utf-8"))

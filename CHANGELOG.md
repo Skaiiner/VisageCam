@@ -2,6 +2,9 @@
 
 ## 1.2.0
 
+- Catalogo de mascaras ampliado de 6 a 14: se anaden caballero cromado, fenix, lobo tribal y cinco antifaces de mascarada (veneciana dorada, mariposa, pluma negra, arlequin, ojos de gata) que dejan la boca visible.
+- Catalogo de accesorios ampliado de 6 a 10: se anaden gorro de lana, corona de flores, monoculo y panuelo.
+
 - Accesos directos en el menu Inicio y el escritorio (`--install-shortcuts`), icono propio y arranque sin consola.
 - Modo espejo configurable: apagado, solo vista previa o vista previa y salida, con selector en la barra inferior.
 - La camara se abre en segundo plano para que la ventana no se congele.

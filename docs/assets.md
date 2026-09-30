@@ -1,5 +1,13 @@
 # Mascaras, accesorios e imagenes propias
 
+## Catalogo incluido
+
+**Mascaras de cara completa**: zorro, robot retro, dragon, gato astronauta, alienigena, oso vintage, caballero cromado, fenix, lobo tribal.
+
+**Antifaces de mascarada** (cubren solo frente y ojos, dejan la boca y la barbilla libres, como un antifaz veneciano): veneciana dorada, mariposa, pluma negra, arlequin, ojos de gata. Se generan con las mismas anclas que las mascaras completas; la diferencia es que el PNG solo pinta la zona superior del rostro y deja transparente el resto.
+
+**Accesorios**: sombrero de copa, gorro de fiesta, corona, gorro de lana, corona de flores, gafas de sol, monoculo, bigote, panuelo, auriculares.
+
 ## Generar los recursos incluidos
 
 ```bash

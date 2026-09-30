@@ -27,7 +27,11 @@ def neutral(isolated_appdata):
     return n
 
 
-@pytest.mark.parametrize("mask_id", ["fox", "robot", "dragon", "cat_astronaut", "alien", "bear"])
+@pytest.mark.parametrize("mask_id", [
+    "fox", "robot", "dragon", "cat_astronaut", "alien", "bear",
+    "chrome_knight", "phoenix", "tribal_wolf",
+    "venetian_gold", "butterfly", "feather_noir", "harlequin", "cat_eye_lace",
+])
 @pytest.mark.parametrize("pose", [
     dict(),
     dict(rotation=0.5),
