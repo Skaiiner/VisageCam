@@ -190,6 +190,33 @@ class ObsClient:
             for i in data["sceneItems"]
         ]
 
+    def add_camera_source(self, scene: str, source_name: str = "VisageCam",
+                          tokens: tuple[str, ...] = ("unity video capture", "visagecam")) -> str:
+        data = self.request(
+            "GetInputPropertiesListPropertyItems",
+            {"inputKind": "dshow_input", "propertyName": "video_device_id"},
+        )
+        device = next(
+            (i for i in data.get("propertyItems", []) if any(t in i["itemName"].lower() for t in tokens)),
+            None,
+        )
+        if device is None:
+            raise ObsError("OBS no ve el dispositivo de VisageCam. Instala Unity Capture y reinicia OBS.")
+        try:
+            self.request(
+                "CreateInput",
+                {
+                    "sceneName": scene,
+                    "inputName": source_name,
+                    "inputKind": "dshow_input",
+                    "inputSettings": {"video_device_id": device["itemValue"]},
+                    "sceneItemEnabled": True,
+                },
+            )
+        except ObsError:
+            self.request("CreateSceneItem", {"sceneName": scene, "sourceName": source_name})
+        return device["itemName"]
+
     def set_item_enabled(self, scene: str, item_id: int, enabled: bool) -> None:
         self.request(
             "SetSceneItemEnabled",

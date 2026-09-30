@@ -72,7 +72,7 @@ class Engine:
 
     def start_virtual(self) -> None:
         width, height = self.target
-        self.output.start(width, height, self.settings.fps)
+        self.output.start(width, height, self.settings.fps, self.settings.virtual_backend)
 
     def stop_virtual(self) -> None:
         self.output.stop()

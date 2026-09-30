@@ -21,7 +21,7 @@ class VirtualCameraOutput:
     def active(self) -> bool:
         return self._cam is not None
 
-    def start(self, width: int, height: int, fps: int) -> None:
+    def start(self, width: int, height: int, fps: int, backend: str = "auto") -> None:
         self.stop()
         try:
             cam = pyvirtualcam.Camera(
@@ -29,12 +29,12 @@ class VirtualCameraOutput:
                 height=height,
                 fps=fps,
                 fmt=pyvirtualcam.PixelFormat.BGR,
-                backend="obs",
+                backend=None if backend == "auto" else backend,
             )
         except Exception as exc:
             raise VirtualCameraError(
-                "No se pudo iniciar la camara virtual. Instala OBS Studio y abre su "
-                "camara virtual al menos una vez para registrar el dispositivo."
+                "No se pudo iniciar la camara virtual. Instala el controlador Unity Capture "
+                "(aparece como fuente en OBS) o OBS Studio y abre su camara virtual una vez."
                 f" Detalle: {exc}"
             ) from exc
         self._cam = cam

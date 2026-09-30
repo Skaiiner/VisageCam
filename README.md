@@ -59,6 +59,15 @@ Consejos: usa fotos frontales, bien iluminadas y sin gafas ni pelo tapando la fr
 
 Las imagenes cargadas se guardan en `%APPDATA%\VisageCam\masks\custom` junto con un JSON. Puedes eliminarlas desde la galeria.
 
+## Que la camara aparezca en OBS y en otras aplicaciones
+
+Hay dos formas de publicar la camara, seleccionables en **Salida**:
+
+- **VisageCam (Unity Capture)**: crea un dispositivo propio que OBS lista como *Dispositivo de captura de video*, ademas de Discord, Zoom, Skype, Teams y navegadores. Instala el controlador [Unity Capture](https://github.com/schellingb/UnityCapture) (ejecuta `Install.bat` como administrador y, si quieres, cambia el nombre del dispositivo a "VisageCam"). Despues, en la pestana **OBS** pulsa **Anadir camara VisageCam a la escena** y la fuente se crea sola.
+- **OBS Virtual Camera**: sirve para Discord, Zoom, etc., pero OBS no permite usar su propia camara virtual como fuente.
+
+Sin controlador, tambien puedes capturar la ventana de VisageCam en OBS con *Captura de ventana*.
+
 ## Mascara incluida y archivos de anclaje
 
 La mascara del zorro se genera por codigo la primera vez que se ejecuta la aplicacion. Para exportarla manualmente:

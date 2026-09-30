@@ -21,6 +21,7 @@ class Settings:
     height: int = 720
     fps: int = 30
     mirror: bool = False
+    virtual_backend: str = "auto"
 
     active_mask: str = ""
     mask_scale: float = 1.0

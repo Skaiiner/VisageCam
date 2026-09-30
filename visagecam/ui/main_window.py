@@ -83,6 +83,15 @@ class MainWindow(QMainWindow):
         self.status = QLabel("")
         self.status.setObjectName("hint")
         left.addWidget(self.status)
+        output_row = QHBoxLayout()
+        output_row.addWidget(QLabel("Salida"))
+        self.backend_combo = QComboBox()
+        self.backend_combo.addItem("Automatica", "auto")
+        self.backend_combo.addItem("VisageCam (Unity Capture) - visible en OBS", "unitycapture")
+        self.backend_combo.addItem("OBS Virtual Camera - solo para otras apps", "obs")
+        self.backend_combo.activated.connect(lambda _: self._set("virtual_backend", self.backend_combo.currentData()))
+        output_row.addWidget(self.backend_combo, 1)
+        left.addLayout(output_row)
         self.virtual_button = QPushButton("Iniciar camara virtual")
         self.virtual_button.setObjectName("primary")
         self.virtual_button.setCheckable(True)
@@ -238,6 +247,10 @@ class MainWindow(QMainWindow):
         switch.clicked.connect(self._obs_switch_scene)
         layout.addWidget(switch)
         layout.addWidget(QLabel("Fuentes de la escena (marca para activar)"))
+        add_source = QPushButton("Anadir camara VisageCam a la escena")
+        add_source.setToolTip("Crea en OBS un Dispositivo de captura de video con la camara de VisageCam")
+        add_source.clicked.connect(self._obs_add_camera)
+        layout.addWidget(add_source)
         self.item_list = QListWidget()
         self.item_list.itemChanged.connect(self._obs_item_toggled)
         layout.addWidget(self.item_list, 1)
@@ -262,12 +275,14 @@ class MainWindow(QMainWindow):
         self.warp_check.setChecked(s.face_warp)
         self.eyes_check.setChecked(s.keep_eyes_mouth)
         self.mirror_check.setChecked(s.mirror)
+        self.backend_combo.setCurrentIndex(max(self.backend_combo.findData(s.virtual_backend), 0))
         {"none": self.bg_none, "blur": self.bg_blur, "image": self.bg_image}.get(
             s.background_mode, self.bg_none
         ).setChecked(True)
         self.bg_path.setText(Path(s.background_image).name if s.background_image else "")
-        index = self.resolution_combo.findData((s.width, s.height))
-        self.resolution_combo.setCurrentIndex(max(index, 0))
+        for index, (width, height) in enumerate(RESOLUTIONS):
+            if (width, height) == (s.width, s.height):
+                self.resolution_combo.setCurrentIndex(index)
 
     def _reset_adjustments(self) -> None:
         defaults = Settings()
@@ -366,7 +381,7 @@ class MainWindow(QMainWindow):
     def _camera_changed(self) -> None:
         if self.camera_combo.currentData() is not None:
             self.settings.camera_index = int(self.camera_combo.currentData())
-        width, height = self.resolution_combo.currentData()
+        width, height = RESOLUTIONS[self.resolution_combo.currentIndex()]
         self.settings.width, self.settings.height = width, height
         self._save_timer.start()
         self._start_camera()
@@ -483,6 +498,17 @@ class MainWindow(QMainWindow):
         self.runner.run(
             lambda: self.obs.set_scene(scene),
             lambda _: self.obs_status.setText(f"Escena activa: {scene}"),
+            self._obs_failed,
+        )
+
+    def _obs_add_camera(self) -> None:
+        scene = self.scene_combo.currentText()
+        if not scene:
+            return
+        self.obs_status.setText("Anadiendo camara a OBS...")
+        self.runner.run(
+            lambda: self.obs.add_camera_source(scene),
+            lambda name: (self.obs_status.setText(f"Camara anadida a la escena {scene} ({name})"), self._obs_scene_view()),
             self._obs_failed,
         )
 
