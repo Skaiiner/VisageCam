@@ -59,6 +59,13 @@ Consejos: usa fotos frontales, bien iluminadas y sin gafas ni pelo tapando la fr
 
 Las imagenes cargadas se guardan en `%APPDATA%\VisageCam\masks\custom` junto con un JSON. Puedes eliminarlas desde la galeria.
 
+## Calidad, gestos y seguimiento
+
+- **Captura con Media Foundation**: consigue 30 fps reales donde DirectShow se queda en 10 fps con muchas webcams. Con **Captura en alta calidad** se captura a 1080p y se reescala a 720p para una imagen mas nitida.
+- **Mejora de imagen**: ajuste automatico de brillo y enfoque suave, util con poca luz.
+- **Seguir mis gestos**: la primera vez que aparezcas en camara, mira de frente con la boca cerrada durante un segundo para calibrar tu rostro (se guarda; puedes repetirlo con **Recalibrar**). Despues las mascaras se deforman con tu cara: la boca se abre, las mejillas y las cejas se mueven, y al girar la cabeza la mascara se adapta.
+- **Seguimiento robusto**: si el detector pierde la cara por un movimiento brusco, se relocaliza en la zona donde estaba y mantiene el filtro un instante mientras la recupera.
+
 ## Accesorios y belleza
 
 - **Accesorios**: sombrero de copa, gorro de fiesta, corona, gafas de sol, bigote y auriculares. Se pueden combinar varios a la vez, con o sin mascara, y cada uno tiene su propia escala, rotacion y desplazamiento. Con **Anadir imagen...** conviertes cualquier PNG en accesorio y eliges donde se ancla: cabeza, ojos, boca, orejas o libre. Si la imagen no tiene transparencia se recorta el fondo.
@@ -72,7 +79,9 @@ Hay dos formas de publicar la camara, seleccionables en **Salida**:
 - **VisageCam (Unity Capture)**: crea un dispositivo propio que OBS lista como *Dispositivo de captura de video*, ademas de Discord, Zoom, Skype, Teams y navegadores. Instala el controlador [Unity Capture](https://github.com/schellingb/UnityCapture) (ejecuta `Install.bat` como administrador y, si quieres, cambia el nombre del dispositivo a "VisageCam"). Despues, en la pestana **OBS** pulsa **Anadir camara VisageCam a la escena** y la fuente se crea sola.
 - **OBS Virtual Camera**: sirve para Discord, Zoom, etc., pero OBS no permite usar su propia camara virtual como fuente.
 
-Sin controlador, tambien puedes capturar la ventana de VisageCam en OBS con *Captura de ventana*.
+- **Flujo local sin controladores**: VisageCam publica el video en `http://127.0.0.1:8765/stream.mjpg`. En OBS anade una *Fuente multimedia*, desmarca *Archivo local* y pega esa direccion. El boton **Anadir camara VisageCam a la escena** lo hace automaticamente cuando no hay controlador.
+
+Tambien puedes capturar la ventana de VisageCam en OBS con *Captura de ventana*.
 
 ## Mascara incluida y archivos de anclaje
 

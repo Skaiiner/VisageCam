@@ -77,7 +77,10 @@ class ObsClient:
                     self.password, auth["salt"], auth["challenge"]
                 )
             ws.send(json.dumps({"op": OP_IDENTIFY, "d": identify}))
-            reply = self._recv_json(ws)
+            try:
+                reply = self._recv_json(ws)
+            except ObsError as exc:
+                raise ObsError("OBS rechazo la conexion: revisa la contrasena del servidor WebSocket") from exc
             if reply.get("op") != OP_IDENTIFIED:
                 raise ObsError("OBS rechazo la identificacion")
             self.obs_version = str(data.get("obsWebSocketVersion", ""))
