@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
 
+import cv2
+
 from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -16,12 +18,11 @@ from PySide6.QtWidgets import (
 )
 
 from visagecam.backgrounds import BackgroundLibrary
-from visagecam.capture import CameraError
 from visagecam.config import Settings
 from visagecam.masks.library import MaskLibrary
 from visagecam.output import VirtualCameraError
 from visagecam.processing.engine import Engine
-from visagecam.ui.components import PreviewWidget, Toast, button, pill, set_tone
+from visagecam.ui.components import PreviewWidget, Segmented, Toast, button, pill, set_tone
 from visagecam.ui.context import Context
 from visagecam.ui.icons import icon
 from visagecam.ui.pages import (
@@ -57,6 +58,7 @@ class MainWindow(QMainWindow):
         self.engine = engine
         self._last_frame_id = -1
         self._camera_wanted = True
+        self._starting = False
         self._retry_elapsed = 0.0
         self.setWindowTitle("VisageCam")
         self.resize(1320, 800)
@@ -166,6 +168,10 @@ class MainWindow(QMainWindow):
         left.setSpacing(12)
         self.preview = PreviewWidget()
         left.addWidget(self.preview, 1)
+        self.mirror_bar = Segmented([("off", "Sin espejo"), ("preview", "Espejo en vista previa"), ("both", "Espejo total")])
+        self.mirror_bar.set_value(self.settings.mirror_mode)
+        self.mirror_bar.changed.connect(lambda v: self.set_mirror(str(v)))
+        left.addWidget(self.mirror_bar)
         self.virtual_button = button("Iniciar camara virtual", "primary", "play", "#0b0d12")
         self.virtual_button.setCheckable(True)
         self.virtual_button.setMinimumHeight(48)
@@ -181,6 +187,7 @@ class MainWindow(QMainWindow):
         self.background = BackgroundPage(self.ctx)
         self.camera = CameraPage(self.ctx, self._camera_changed)
         self.obs = ObsPage(self.ctx)
+        self.camera.on_mirror = self._mirror_synced
         self.pages = {
             "filters": self.filters,
             "accessories": self.accessories,
@@ -195,6 +202,15 @@ class MainWindow(QMainWindow):
         outer.addLayout(body, 1)
         self.show_page("filters")
         return main
+
+    def set_mirror(self, mode: str) -> None:
+        self.ctx.set("mirror_mode", mode)
+        self.camera.mirror.set_value(mode)
+        self.notify({"off": "Espejo desactivado", "preview": "Espejo solo en la vista previa",
+                     "both": "Espejo en vista previa y salida"}.get(mode, ""), "info")
+
+    def _mirror_synced(self, mode: str) -> None:
+        self.mirror_bar.set_value(mode)
 
     def show_page(self, key: str) -> None:
         self.stack.setCurrentWidget(self.pages[key])
@@ -243,24 +259,32 @@ class MainWindow(QMainWindow):
         self._camera_wanted = True
         self._start_camera()
 
-    def _start_camera(self) -> bool:
+    def _start_camera(self) -> None:
+        if self._starting:
+            return
+        self._starting = True
         was_virtual = self.virtual_button.isChecked()
         if was_virtual:
             self._set_virtual_button(False)
             self.engine.stop_virtual()
-        try:
-            self.engine.start()
-        except CameraError as exc:
-            self.preview.clear(f"{exc}\n\nComprueba que la camara esta conectada y que ninguna otra aplicacion la usa.")
-            return False
-        except Exception as exc:
-            log.exception("Error inesperado al abrir la camara")
-            self.preview.clear(f"No se pudo iniciar la camara: {exc}")
-            return False
+        if not self.preview.has_image:
+            self.preview.clear("Abriendo la camara...")
+        self.ctx.runner.run(
+            self.engine.start,
+            lambda _r: self._camera_started(was_virtual),
+            self._camera_failed,
+        )
+
+    def _camera_started(self, was_virtual: bool) -> None:
+        self._starting = False
         self._last_frame_id = -1
         if was_virtual:
             self.virtual_button.setChecked(True)
-        return True
+
+    def _camera_failed(self, message: str) -> None:
+        self._starting = False
+        self.preview.live = False
+        self.preview.clear(f"{message}\n\nComprueba que la camara esta conectada y que ninguna otra aplicacion la usa.")
 
     def _toggle_virtual(self, checked: bool) -> None:
         if checked:
@@ -297,7 +321,7 @@ class MainWindow(QMainWindow):
         if frame is not None and frame_id != self._last_frame_id:
             self._last_frame_id = frame_id
             self.preview.live = True
-            self.preview.set_frame(frame)
+            self.preview.set_frame(cv2.flip(frame, 1) if self.settings.mirror_mode == "preview" else frame)
         elif frame is None and self.preview.has_image and not self.engine.running:
             self.preview.live = False
             self.preview.clear("Camara detenida")
@@ -328,7 +352,7 @@ class MainWindow(QMainWindow):
         if engine.error and engine.running:
             self.notify(engine.error, "warn")
             engine.error = ""
-        if not engine.running and self._camera_wanted:
+        if not engine.running and self._camera_wanted and not self._starting:
             self._retry_elapsed += 0.5
             if self._retry_elapsed >= RETRY_SECONDS:
                 self._retry_elapsed = 0.0

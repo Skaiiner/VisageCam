@@ -9,6 +9,7 @@ Camara virtual para Windows 10 y 11 escrita en Python. Captura tu webcam, detect
 - **Belleza**: piel suave, luminosidad, labios y dientes.
 - **Fondo**: desenfoque o imagen propia por segmentacion.
 - **Calidad**: captura a 1080p reescalada a 720p, reduccion de ruido temporal y mejora de imagen. 30 fps a 720p.
+- **Espejo**: sin espejo, solo en la vista previa (lo que ven los demas no cambia) o en la vista previa y la salida.
 - **Salida**: camara virtual (OBS Virtual Camera o Unity Capture), flujo MJPEG para OBS sin controladores y cliente OBS WebSocket v5.
 - Configuracion persistente en JSON, registro en archivo y reintento automatico si la camara se desconecta.
 

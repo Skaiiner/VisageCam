@@ -21,6 +21,7 @@ class Settings:
     height: int = 720
     fps: int = 30
     mirror: bool = False
+    mirror_mode: str = "off"
     hq_capture: bool = True
     enhance: float = 0.5
     expression: bool = True
@@ -97,6 +98,11 @@ class Settings:
         self.camera_index = max(0, int(self.camera_index))
         if (self.width, self.height) not in ((640, 480), (960, 540), (1280, 720), (1920, 1080)):
             self.width, self.height = 1280, 720
+        if self.mirror and self.mirror_mode == "off":
+            self.mirror_mode = "both"
+        self.mirror = False
+        if self.mirror_mode not in ("off", "preview", "both"):
+            self.mirror_mode = "off"
         if self.background_mode not in ("none", "blur", "image"):
             self.background_mode = "none"
         if self.virtual_backend not in ("auto", "unitycapture", "obs"):

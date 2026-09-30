@@ -210,7 +210,9 @@ def test_camera_loss_triggers_recovery(window, errors):
     window.engine.capture.fail_open = True
     window.engine.capture.close()
     assert wait_for(lambda: not window.engine.running, 6)
-    assert window._start_camera() is False
+    window._start_camera()
+    assert wait_for(lambda: not window._starting, 6)
+    assert not window.engine.running
     assert "camara" in window.preview.message.lower()
     window.engine.capture.fail_open = False
     window._retry_elapsed = 99
@@ -245,3 +247,27 @@ def test_window_close_is_clean(qapp, library, monkeypatch, isolated_appdata, err
     QTest.qWait(100)
     assert not engine.running
     assert not errors
+
+
+def test_mirror_modes(window, errors):
+    assert wait_for(lambda: window.preview.has_image)
+    for mode in ("preview", "both", "off", "preview"):
+        window.mirror_bar.changed.emit(mode)
+        QTest.qWait(150)
+        assert window.settings.mirror_mode == mode
+        assert window.camera.mirror.value() == mode
+    window.camera.mirror.changed.emit("off")
+    assert window.mirror_bar.value() == "off"
+    window.mirror_bar.changed.emit("preview")
+    wait_for(lambda: window.preview._frame is not None)
+    _, raw = window.engine.latest()
+    QTest.qWait(150)
+    assert np.array_equal(window.preview._frame, raw[:, ::-1])
+    assert not errors
+
+
+def test_legacy_mirror_setting_is_migrated(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text('{"mirror": true}', encoding="utf-8")
+    s = Settings.load(path)
+    assert s.mirror_mode == "both" and s.mirror is False

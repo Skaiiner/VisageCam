@@ -133,7 +133,7 @@ def test_pipeline_end_to_end(library, monkeypatch, isolated_appdata):
     for key in ("fox", "", "missing-mask"):
         s.active_mask = key
         pipe.process(base.copy())
-    s.mirror = True
+    s.mirror_mode = "both"
     s.expression = False
     s.enhance = 1.0
     pipe.process(base.copy())

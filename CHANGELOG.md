@@ -2,6 +2,8 @@
 
 ## 1.2.0
 
+- Modo espejo configurable: apagado, solo vista previa o vista previa y salida, con selector en la barra inferior.
+- La camara se abre en segundo plano para que la ventana no se congele.
 - Estructura del repositorio con `src/`, `tests/`, `docs/` y `scripts/`, y `pyproject.toml`.
 - Interfaz renovada: barra lateral, tarjetas, interruptores, galerias y notificaciones.
 - Estudio de imagenes: arrastrar y soltar, pegar, vista previa, recorte de fondo y eleccion de uso.

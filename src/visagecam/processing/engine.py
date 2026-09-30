@@ -24,6 +24,7 @@ class Engine:
         self._thread: threading.Thread | None = None
         self._running = False
         self._lock = threading.Lock()
+        self._lifecycle = threading.RLock()
         self._latest: np.ndarray | None = None
         self._frame_id = 0
         self._out_cond = threading.Condition()
@@ -48,6 +49,10 @@ class Engine:
         return self._pipeline.face_found
 
     def start(self) -> None:
+        with self._lifecycle:
+            self._start()
+
+    def _start(self) -> None:
         self.stop()
         s = self.settings
         self.error = ""
@@ -66,6 +71,10 @@ class Engine:
         self._thread.start()
 
     def stop(self) -> None:
+        with self._lifecycle:
+            self._stop()
+
+    def _stop(self) -> None:
         self._running = False
         thread, self._thread = self._thread, None
         if thread is not None and thread is not threading.current_thread():

@@ -471,6 +471,7 @@ class CameraPage(Page):
     def __init__(self, ctx: Context, on_camera_changed: Callable[[], None]) -> None:
         super().__init__(ctx)
         self._changed = on_camera_changed
+        self.on_mirror: Callable[[str], None] | None = None
         self.column.addLayout(header("Camara y salida"))
         cam = Card("Camara")
         row = QHBoxLayout()
@@ -488,11 +489,12 @@ class CameraPage(Page):
         self.res_combo.activated.connect(lambda _i: self._apply())
         cam.add(self.res_combo)
         self.sw_hq = SwitchRow("Captura en alta calidad", "Captura a 1080p y reescala a 720p para una imagen mas nitida.")
-        self.sw_mirror = SwitchRow("Espejo", "Invierte la imagen horizontalmente.")
+        self.mirror = Segmented([("off", "Sin espejo"), ("preview", "Solo vista previa"), ("both", "Vista previa y salida")])
+        self.mirror.changed.connect(lambda v: self._on_mirror(str(v)))
         self.sw_hq.toggled.connect(self._hq)
-        self.sw_mirror.toggled.connect(lambda v: ctx.set("mirror", bool(v)))
         cam.add(self.sw_hq)
-        cam.add(self.sw_mirror)
+        cam.add(self.mirror)
+        cam.add(muted("Solo vista previa te muestra como en un espejo sin invertir lo que ven los demas. Vista previa y salida tambien invierte la camara virtual."))
         self.sl_enhance = SliderRow("Mejora de imagen", 0, 100, 50, 1, " %")
         self.sl_enhance.changed.connect(lambda v: ctx.set("enhance", v / 100.0))
         cam.add(self.sl_enhance)
@@ -536,7 +538,7 @@ class CameraPage(Page):
     def refresh(self) -> None:
         s = self.ctx.settings
         self.sw_hq.setChecked(s.hq_capture)
-        self.sw_mirror.setChecked(s.mirror)
+        self.mirror.set_value(s.mirror_mode)
         self.sl_enhance.set_value(s.enhance * 100)
         self.backend.set_value(s.virtual_backend if s.virtual_backend in ("auto", "unitycapture", "obs") else "auto")
         for index, (width, height) in enumerate(RESOLUTIONS):
@@ -556,6 +558,11 @@ class CameraPage(Page):
         self.ctx.settings.width, self.ctx.settings.height = width, height
         self.ctx.save()
         self._changed()
+
+    def _on_mirror(self, mode: str) -> None:
+        self.ctx.set("mirror_mode", mode)
+        if self.on_mirror is not None:
+            self.on_mirror(mode)
 
     def _hq(self, checked: bool) -> None:
         if self.ctx.settings.hq_capture != bool(checked):

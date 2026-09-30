@@ -49,7 +49,7 @@ class FramePipeline:
 
     def process(self, frame: np.ndarray) -> np.ndarray:
         settings = self.settings
-        if settings.mirror:
+        if settings.mirror_mode == "both":
             frame = cv2.flip(frame, 1)
         height, width = frame.shape[:2]
         amount = float(settings.enhance)
