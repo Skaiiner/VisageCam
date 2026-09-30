@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.4.0
+
+- Modo dos personas: deteccion de hasta dos caras a la vez, cada una con su propio filtro, accesorios y belleza, configurables desde el nuevo menu **Persona 2**.
+
 ## 1.2.0
 
 - Catalogo de mascaras ampliado de 6 a 14: se anaden caballero cromado, fenix, lobo tribal y cinco antifaces de mascarada (veneciana dorada, mariposa, pluma negra, arlequin, ojos de gata) que dejan la boca visible.
