@@ -59,6 +59,12 @@ Consejos: usa fotos frontales, bien iluminadas y sin gafas ni pelo tapando la fr
 
 Las imagenes cargadas se guardan en `%APPDATA%\VisageCam\masks\custom` junto con un JSON. Puedes eliminarlas desde la galeria.
 
+## Accesorios y belleza
+
+- **Accesorios**: sombrero de copa, gorro de fiesta, corona, gafas de sol, bigote y auriculares. Se pueden combinar varios a la vez, con o sin mascara, y cada uno tiene su propia escala, rotacion y desplazamiento. Con **Anadir imagen...** conviertes cualquier PNG en accesorio y eliges donde se ancla: cabeza, ojos, boca, orejas o libre. Si la imagen no tiene transparencia se recorta el fondo.
+- **Belleza**: piel suave, luminosidad, color de labios y blanqueado de dientes, aplicados solo sobre el rostro.
+- Hay seis mascaras incluidas: zorro, robot retro, dragon, gato astronauta, alienigena de un ojo y oso vintage.
+
 ## Que la camara aparezca en OBS y en otras aplicaciones
 
 Hay dos formas de publicar la camara, seleccionables en **Salida**:

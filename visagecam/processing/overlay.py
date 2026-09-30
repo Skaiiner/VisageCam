@@ -7,12 +7,20 @@ from visagecam.config import Settings
 from visagecam.masks.model import Mask
 from visagecam.processing.blend import blend_premultiplied
 from visagecam.processing.landmarks import (
+    EYE_LEFT,
+    EYE_RIGHT,
+    FACE_EDGE_LEFT,
+    FACE_EDGE_RIGHT,
     FACE_OVAL,
+    FOREHEAD,
     face_roll,
     face_width,
     group_center,
 )
 from visagecam.processing.transforms import adjustment, similarity, to3
+
+SLOT_WIDTH = {"head": 1.15, "eyes": 1.05, "mouth": 0.55, "ears": 1.3, "free": 1.6}
+UPPER_LIP = (0,)
 
 
 class OverlayRenderer:
@@ -36,22 +44,42 @@ class OverlayRenderer:
         return levels
 
     @staticmethod
-    def _base(mask: Mask, landmarks: np.ndarray) -> np.ndarray:
+    def _slot_target(slot: str, landmarks: np.ndarray, up: np.ndarray, fw: float) -> np.ndarray:
+        if slot == "head":
+            return group_center(landmarks, FOREHEAD) + up * (0.02 * fw)
+        if slot == "eyes":
+            return (group_center(landmarks, EYE_LEFT) + group_center(landmarks, EYE_RIGHT)) / 2.0
+        if slot == "mouth":
+            return group_center(landmarks, UPPER_LIP) + up * (0.05 * fw)
+        if slot == "ears":
+            return (landmarks[FACE_EDGE_LEFT] + landmarks[FACE_EDGE_RIGHT]) / 2.0
+        return landmarks[FACE_OVAL].mean(axis=0)
+
+    @classmethod
+    def _base(cls, mask: Mask, landmarks: np.ndarray) -> np.ndarray:
         if mask.anchors:
             src = np.array([a.point for a in mask.anchors], dtype=np.float64)
             dst = np.array([group_center(landmarks, a.landmarks) for a in mask.anchors], dtype=np.float64)
             return to3(similarity(src, dst))
         bx, by, bw, bh = mask.content_box
         fw = face_width(landmarks)
-        center = landmarks[FACE_OVAL].mean(axis=0)
         roll = face_roll(landmarks)
-        scale = 1.6 * fw / max(bw, bh, 1)
+        up = np.array([math.sin(roll), -math.cos(roll)])
+        slot = mask.slot if mask.slot in SLOT_WIDTH else "free"
+        target = cls._slot_target(slot, landmarks, up, fw)
+        ratio = mask.width_ratio or SLOT_WIDTH[slot]
+        scale = ratio * fw / max(bw, 1)
+        if mask.pivot is not None:
+            px, py = mask.pivot
+        elif slot == "head":
+            px, py = bx + bw / 2.0, by + bh
+        else:
+            px, py = bx + bw / 2.0, by + bh / 2.0
         cos, sin = math.cos(roll) * scale, math.sin(roll) * scale
-        cx, cy = bx + bw / 2.0, by + bh / 2.0
         return np.array(
             [
-                [cos, -sin, center[0] - cos * cx + sin * cy],
-                [sin, cos, center[1] - sin * cx - cos * cy],
+                [cos, -sin, target[0] - cos * px + sin * py],
+                [sin, cos, target[1] - sin * px - cos * py],
                 [0.0, 0.0, 1.0],
             ]
         )
@@ -71,17 +99,28 @@ class OverlayRenderer:
         ratio = (self._luma + 20.0) / (mask.mean_luma + 20.0)
         return float(np.clip(ratio ** (0.8 * amount), 0.55, 1.5))
 
-    def draw(self, frame: np.ndarray, mask: Mask, landmarks: np.ndarray, settings: Settings) -> None:
+    def draw(
+        self,
+        frame: np.ndarray,
+        mask: Mask,
+        landmarks: np.ndarray,
+        settings: Settings,
+        adjust: tuple[float, float, float, float] | None = None,
+        opacity: float | None = None,
+    ) -> None:
         height, width = frame.shape[:2]
         fw = face_width(landmarks)
+        if adjust is None:
+            adjust = (settings.mask_scale, settings.mask_rotation, settings.mask_offset_x, settings.mask_offset_y)
+        if opacity is None:
+            opacity = float(np.clip(settings.mask_opacity, 0.0, 1.0))
         base = self._base(mask, landmarks)
         center = landmarks[FACE_OVAL].mean(axis=0)
-        adj = adjustment(
-            center,
-            settings.mask_scale,
-            settings.mask_rotation,
-            (settings.mask_offset_x * fw, settings.mask_offset_y * fw),
-        )
+        roll = face_roll(landmarks)
+        right = np.array([math.cos(roll), math.sin(roll)])
+        down = np.array([-math.sin(roll), math.cos(roll)])
+        offset = (right * adjust[2] + down * adjust[3]) * fw
+        adj = adjustment(center, adjust[0], adjust[1], offset)
         full = adj @ base
         scale = math.sqrt(abs(np.linalg.det(full[:2, :2])))
         levels = self._pyramid(mask)
@@ -111,10 +150,9 @@ class OverlayRenderer:
             borderValue=0,
         )
         softness = float(np.clip(settings.edge_softness, 0.0, 1.0))
-        if softness > 0.05:
-            warped = cv2.GaussianBlur(warped, (0, 0), 0.4 + 1.6 * softness)
+        if softness > 0.35:
+            warped = cv2.GaussianBlur(warped, (0, 0), 0.4 + softness)
         gain = self._light_gain(frame, landmarks, mask, float(settings.light_match))
-        opacity = float(np.clip(settings.mask_opacity, 0.0, 1.0))
         alpha = warped[:, :, 3].astype(np.float32) / 255.0 * opacity
         pre = warped[:, :, :3].astype(np.float32) * (gain * opacity)
         blend_premultiplied(frame, x0, y0, pre, alpha)

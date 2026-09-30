@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListView,
@@ -60,6 +61,7 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._populate_masks()
+        self._populate_accessories()
         self._refresh_cameras()
         self._sync_controls()
 
@@ -103,6 +105,8 @@ class MainWindow(QMainWindow):
         right.addWidget(self._build_camera_box())
         tabs = QTabWidget()
         tabs.addTab(self._build_masks_tab(), "Mascaras")
+        tabs.addTab(self._build_accessories_tab(), "Accesorios")
+        tabs.addTab(self._build_beauty_tab(), "Belleza")
         tabs.addTab(self._build_background_tab(), "Fondo")
         tabs.addTab(self._build_obs_tab(), "OBS")
         right.addWidget(tabs, 1)
@@ -192,6 +196,65 @@ class MainWindow(QMainWindow):
         layout.addStretch(1)
         return page
 
+    def _build_accessories_tab(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        self.acc_list = QListWidget()
+        self.acc_list.setViewMode(QListView.IconMode)
+        self.acc_list.setIconSize(QSize(THUMB, THUMB))
+        self.acc_list.setResizeMode(QListView.Adjust)
+        self.acc_list.setMovement(QListView.Static)
+        self.acc_list.setSpacing(6)
+        self.acc_list.setMinimumHeight(210)
+        self.acc_list.itemChanged.connect(self._accessory_toggled)
+        self.acc_list.currentItemChanged.connect(self._accessory_selected)
+        layout.addWidget(self.acc_list)
+        hint = QLabel("Marca los accesorios que quieras llevar. Selecciona uno para ajustar su posicion.")
+        hint.setObjectName("hint")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+        buttons = QHBoxLayout()
+        add = QPushButton("Anadir imagen...")
+        add.setToolTip("Sombreros, gafas, orejas o cualquier PNG; si no tiene transparencia se recorta el fondo")
+        add.clicked.connect(self._import_accessory)
+        self.acc_delete = QPushButton("Eliminar")
+        self.acc_delete.clicked.connect(self._delete_accessory)
+        clear = QPushButton("Quitar todos")
+        clear.clicked.connect(self._clear_accessories)
+        buttons.addWidget(add, 1)
+        buttons.addWidget(self.acc_delete)
+        buttons.addWidget(clear)
+        layout.addLayout(buttons)
+        self.acc_scale = SliderRow("Escala", 20, 300, 100, 1, " %")
+        self.acc_rot = SliderRow("Rotacion", -180, 180, 0, 1, " grados")
+        self.acc_x = SliderRow("Desplaz. X", -100, 100, 0, 1)
+        self.acc_y = SliderRow("Desplaz. Y", -100, 100, 0, 1)
+        for slider in (self.acc_scale, self.acc_rot, self.acc_x, self.acc_y):
+            slider.changed.connect(self._accessory_adjust_changed)
+            layout.addWidget(slider)
+        layout.addStretch(1)
+        return page
+
+    def _build_beauty_tab(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        self.sl_smooth = SliderRow("Piel suave", 0, 100, 0, 1, " %")
+        self.sl_bright = SliderRow("Luminosidad", 0, 100, 0, 1, " %")
+        self.sl_lips = SliderRow("Labios", 0, 100, 0, 1, " %")
+        self.sl_teeth = SliderRow("Dientes", 0, 100, 0, 1, " %")
+        self.sl_smooth.changed.connect(lambda v: self._set("beauty_smooth", v / 100.0))
+        self.sl_bright.changed.connect(lambda v: self._set("beauty_bright", v / 100.0))
+        self.sl_lips.changed.connect(lambda v: self._set("beauty_lips", v / 100.0))
+        self.sl_teeth.changed.connect(lambda v: self._set("beauty_teeth", v / 100.0))
+        for slider in (self.sl_smooth, self.sl_bright, self.sl_lips, self.sl_teeth):
+            layout.addWidget(slider)
+        note = QLabel("Los retoques se aplican solo a tu rostro y funcionan con o sin mascara.")
+        note.setObjectName("hint")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+        layout.addStretch(1)
+        return page
+
     def _build_background_tab(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
@@ -272,6 +335,10 @@ class MainWindow(QMainWindow):
         self.sl_light.set_value(s.light_match * 100)
         self.sl_soft.set_value(s.edge_softness * 100)
         self.sl_blur.set_value(s.blur_strength)
+        self.sl_smooth.set_value(s.beauty_smooth * 100)
+        self.sl_bright.set_value(s.beauty_bright * 100)
+        self.sl_lips.set_value(s.beauty_lips * 100)
+        self.sl_teeth.set_value(s.beauty_teeth * 100)
         self.warp_check.setChecked(s.face_warp)
         self.eyes_check.setChecked(s.keep_eyes_mouth)
         self.mirror_check.setChecked(s.mirror)
@@ -329,6 +396,86 @@ class MainWindow(QMainWindow):
             self.mask_info.setText("Mascara anclada a los puntos del Face Mesh.")
         else:
             self.mask_info.setText("Imagen superpuesta y centrada en tu cara. Ajusta escala y posicion.")
+
+    def _populate_accessories(self) -> None:
+        self.acc_list.blockSignals(True)
+        self.acc_list.clear()
+        for item in self.library.accessories():
+            entry = QListWidgetItem(QIcon(QPixmap.fromImage(bgra_to_qimage(item.thumbnail(THUMB)))), item.name)
+            entry.setData(Qt.UserRole, item.mask_id)
+            entry.setSizeHint(QSize(THUMB + 20, THUMB + 40))
+            entry.setTextAlignment(Qt.AlignHCenter)
+            entry.setFlags(entry.flags() | Qt.ItemIsUserCheckable)
+            entry.setCheckState(Qt.Checked if item.mask_id in self.settings.accessories else Qt.Unchecked)
+            self.acc_list.addItem(entry)
+        self.acc_list.blockSignals(False)
+        self._accessory_selected(self.acc_list.currentItem())
+
+    def _accessory_toggled(self, entry: QListWidgetItem) -> None:
+        acc_id = entry.data(Qt.UserRole)
+        active = [a for a in self.settings.accessories if a != acc_id]
+        if entry.checkState() == Qt.Checked:
+            active.append(acc_id)
+        self._set("accessories", active)
+
+    def _accessory_selected(self, entry: QListWidgetItem | None) -> None:
+        enabled = entry is not None
+        for slider in (self.acc_scale, self.acc_rot, self.acc_x, self.acc_y):
+            slider.setEnabled(enabled)
+        if entry is None:
+            self.acc_delete.setEnabled(False)
+            return
+        acc_id = entry.data(Qt.UserRole)
+        item = self.library.get(acc_id)
+        self.acc_delete.setEnabled(item is not None and not item.builtin)
+        scale, rotation, dx, dy = self.settings.accessory_adjust.get(acc_id, (1.0, 0.0, 0.0, 0.0))
+        self.acc_scale.set_value(scale * 100)
+        self.acc_rot.set_value(rotation)
+        self.acc_x.set_value(dx * 100)
+        self.acc_y.set_value(dy * 100)
+
+    def _accessory_adjust_changed(self, _value: float = 0.0) -> None:
+        entry = self.acc_list.currentItem()
+        if entry is None:
+            return
+        values = [self.acc_scale.value() / 100.0, self.acc_rot.value(), self.acc_x.value() / 100.0, self.acc_y.value() / 100.0]
+        adjust = dict(self.settings.accessory_adjust)
+        adjust[entry.data(Qt.UserRole)] = values
+        self._set("accessory_adjust", adjust)
+
+    def _import_accessory(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Elegir accesorio", "", IMAGE_FILTER)
+        if not path:
+            return
+        labels = {"Cabeza (sombreros, coronas)": "head", "Ojos (gafas)": "eyes", "Boca (bigotes)": "mouth",
+                  "Orejas (auriculares)": "ears", "Libre (centro de la cara)": "free"}
+        choice, ok = QInputDialog.getItem(self, "Colocacion", "Donde se coloca:", list(labels), 0, False)
+        if not ok:
+            return
+        slot = labels[choice]
+
+        def done(item) -> None:
+            self._set("accessories", list(self.settings.accessories) + [item.mask_id])
+            self._populate_accessories()
+
+        self.runner.run(
+            lambda: self.library.import_image(Path(path), "accessory", slot),
+            done,
+            lambda message: QMessageBox.warning(self, "VisageCam", f"No se pudo importar el accesorio:\n{message}"),
+        )
+
+    def _delete_accessory(self) -> None:
+        entry = self.acc_list.currentItem()
+        if entry is None:
+            return
+        acc_id = entry.data(Qt.UserRole)
+        if self.library.remove(acc_id):
+            self._set("accessories", [a for a in self.settings.accessories if a != acc_id])
+            self._populate_accessories()
+
+    def _clear_accessories(self) -> None:
+        self._set("accessories", [])
+        self._populate_accessories()
 
     def _import_image(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Elegir imagen", "", IMAGE_FILTER)

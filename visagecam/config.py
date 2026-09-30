@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -34,6 +34,14 @@ class Settings:
     edge_softness: float = 0.3
     keep_eyes_mouth: bool = True
     face_warp: bool = True
+
+    beauty_smooth: float = 0.0
+    beauty_bright: float = 0.0
+    beauty_lips: float = 0.0
+    beauty_teeth: float = 0.0
+
+    accessories: list = field(default_factory=list)
+    accessory_adjust: dict = field(default_factory=dict)
 
     background_mode: str = "none"
     background_image: str = ""

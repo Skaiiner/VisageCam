@@ -42,18 +42,28 @@ def write_mask(
     bgra: np.ndarray,
     anchors: list[Anchor],
     face_landmarks: np.ndarray | None = None,
+    kind: str = "mask",
+    slot: str = "free",
+    pivot: tuple[float, float] | None = None,
+    width_ratio: float | None = None,
 ) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     save_png(directory / f"{mask_id}.png", bgra)
     payload: dict = {
         "name": name,
         "image": f"{mask_id}.png",
+        "kind": kind,
+        "slot": slot,
         "size": [int(bgra.shape[1]), int(bgra.shape[0])],
         "anchors": [
             {"name": a.name, "landmarks": list(a.landmarks), "point": [float(a.point[0]), float(a.point[1])]}
             for a in anchors
         ],
     }
+    if pivot is not None:
+        payload["pivot"] = [float(pivot[0]), float(pivot[1])]
+    if width_ratio is not None:
+        payload["width_ratio"] = float(width_ratio)
     if face_landmarks is not None:
         payload["face_landmarks"] = np.round(face_landmarks, 2).tolist()
     json_path = directory / f"{mask_id}.json"
@@ -79,4 +89,8 @@ def read_mask(json_path: Path, builtin: bool) -> Mask:
         anchors=anchors,
         face_landmarks=face,
         builtin=builtin,
+        kind=payload.get("kind", "mask"),
+        slot=payload.get("slot", "free"),
+        pivot=tuple(payload["pivot"]) if payload.get("pivot") else None,
+        width_ratio=payload.get("width_ratio"),
     )

@@ -14,70 +14,85 @@ from visagecam.processing.landmarks import detect_static_face
 
 log = logging.getLogger(__name__)
 
+SLOTS = ("head", "eyes", "mouth", "ears", "free")
+
 
 class MaskLibrary:
     def __init__(self, root: Path) -> None:
-        self.builtin_dir = root / "builtin"
-        self.custom_dir = root / "custom"
-        self._masks: dict[str, Mask] = {}
+        self.dirs = {
+            ("mask", True): root / "builtin",
+            ("mask", False): root / "custom",
+            ("accessory", True): root.parent / "accessories" / "builtin",
+            ("accessory", False): root.parent / "accessories" / "custom",
+        }
+        self._items: dict[str, Mask] = {}
 
     def load(self) -> None:
-        generator.ensure_masks(self.builtin_dir)
-        self.custom_dir.mkdir(parents=True, exist_ok=True)
-        self._masks.clear()
-        for directory, builtin in ((self.builtin_dir, True), (self.custom_dir, False)):
+        generator.ensure_masks(self.dirs[("mask", True)])
+        generator.ensure_accessories(self.dirs[("accessory", True)])
+        self._items.clear()
+        for (kind, builtin), directory in self.dirs.items():
+            directory.mkdir(parents=True, exist_ok=True)
             for json_path in sorted(directory.glob("*.json")):
                 try:
-                    mask = read_mask(json_path, builtin)
+                    item = read_mask(json_path, builtin)
                 except Exception:
-                    log.exception("No se pudo cargar la mascara %s", json_path.name)
+                    log.exception("No se pudo cargar %s", json_path.name)
                     continue
-                self._masks[mask.mask_id] = mask
-        log.info("%d mascaras cargadas", len(self._masks))
+                item.kind = kind
+                self._items[item.mask_id] = item
+        log.info("%d elementos cargados", len(self._items))
+
+    def _listing(self, kind: str, order: list[str]) -> list[Mask]:
+        pool = [m for m in self._items.values() if m.kind == kind]
+        rank = {mask_id: i for i, mask_id in enumerate(order)}
+        builtin = sorted((m for m in pool if m.builtin), key=lambda m: rank.get(m.mask_id, len(rank)))
+        return builtin + [m for m in pool if not m.builtin]
 
     def all(self) -> list[Mask]:
-        builtin = [m for m in self._masks.values() if m.builtin]
-        custom = [m for m in self._masks.values() if not m.builtin]
-        order = {mask_id: i for i, mask_id in enumerate(generator.MASK_ORDER)}
-        builtin.sort(key=lambda m: order.get(m.mask_id, len(order)))
-        return builtin + custom
+        return self._listing("mask", generator.MASK_ORDER)
+
+    def accessories(self) -> list[Mask]:
+        return self._listing("accessory", generator.ACCESSORY_ORDER)
 
     def get(self, mask_id: str) -> Mask | None:
-        return self._masks.get(mask_id)
+        return self._items.get(mask_id)
 
-    def import_image(self, path: Path) -> Mask:
+    def import_image(self, path: Path, kind: str = "mask", slot: str = "free") -> Mask:
         bgra = load_image_bgra(path)
         bgr = np.ascontiguousarray(bgra[:, :, :3])
-        landmarks = detect_static_face(bgr)
-        has_alpha = bool((bgra[:, :, 3] < 250).any())
-        if landmarks is None and not has_alpha:
+        landmarks = detect_static_face(bgr) if kind == "mask" else None
+        if landmarks is None and not bool((bgra[:, :, 3] < 250).any()):
             alpha = remove_background(bgr)
             if alpha is not None:
                 bgra[:, :, 3] = alpha
                 log.info("Fondo eliminado automaticamente de %s", path.name)
         slug = re.sub(r"[^a-z0-9]+", "-", path.stem.lower()).strip("-") or "imagen"
-        mask_id = f"custom-{slug}-{int(time.time())}"
-        write_mask(self.custom_dir, mask_id, path.stem, bgra, [], landmarks)
-        mask = read_mask(self.custom_dir / f"{mask_id}.json", False)
-        self._masks[mask.mask_id] = mask
-        log.info(
-            "Imagen importada como %s (%s)", mask_id, "rostro" if landmarks is not None else "superposicion"
-        )
-        return mask
+        prefix = "custom" if kind == "mask" else "acc"
+        mask_id = f"{prefix}-{slug}-{int(time.time())}"
+        directory = self.dirs[(kind, False)]
+        write_mask(directory, mask_id, path.stem, bgra, [], landmarks, kind=kind, slot=slot)
+        item = read_mask(directory / f"{mask_id}.json", False)
+        item.kind = kind
+        self._items[item.mask_id] = item
+        log.info("Imagen importada como %s (%s)", mask_id, kind)
+        return item
 
     def remove(self, mask_id: str) -> bool:
-        mask = self._masks.get(mask_id)
-        if mask is None or mask.builtin:
+        item = self._items.get(mask_id)
+        if item is None or item.builtin:
             return False
+        directory = self.dirs[(item.kind, False)]
         for suffix in (".json", ".png"):
             try:
-                (self.custom_dir / f"{mask_id}{suffix}").unlink()
+                (directory / f"{mask_id}{suffix}").unlink()
             except FileNotFoundError:
                 pass
-        del self._masks[mask_id]
+        del self._items[mask_id]
         return True
 
     def export(self, mask_id: str, target: Path) -> None:
-        source = self.builtin_dir if self._masks[mask_id].builtin else self.custom_dir
+        item = self._items[mask_id]
+        source = self.dirs[(item.kind, item.builtin)]
         for suffix in (".json", ".png"):
             shutil.copy2(source / f"{mask_id}{suffix}", target / f"{mask_id}{suffix}")

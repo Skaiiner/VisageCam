@@ -110,6 +110,13 @@ def fox() -> np.ndarray:
 
 
 
+from visagecam.masks.designs_more import alien, bear, cat_astronaut, dragon, robot  # noqa: E402
+
 DESIGNS: dict[str, tuple[str, Callable[[], np.ndarray]]] = {
     "fox": ("Zorro", fox),
+    "robot": ("Robot retro", robot),
+    "dragon": ("Dragon", dragon),
+    "cat_astronaut": ("Gato astronauta", cat_astronaut),
+    "alien": ("Alienigena", alien),
+    "bear": ("Oso vintage", bear),
 }

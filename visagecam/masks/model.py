@@ -19,6 +19,10 @@ class Mask:
     anchors: list[Anchor] = field(default_factory=list)
     face_landmarks: np.ndarray | None = None
     builtin: bool = False
+    kind: str = "mask"
+    slot: str = "free"
+    pivot: tuple[float, float] | None = None
+    width_ratio: float | None = None
     content_box: tuple[int, int, int, int] = (0, 0, 0, 0)
     mean_luma: float = 128.0
 
