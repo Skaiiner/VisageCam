@@ -138,3 +138,33 @@ def test_cutout_handles_flat_and_noise():
     noise = np.random.default_rng(2).integers(0, 255, (200, 200, 3), dtype=np.uint8)
     result = remove_background(noise)
     assert result is None or result.shape == (200, 200)
+
+
+def test_shortcuts_are_created_and_removed(tmp_path):
+    import subprocess
+
+    from visagecam import shortcuts
+
+    start, desktop = tmp_path / "inicio", tmp_path / "escritorio"
+    created = shortcuts.install(desktop=True, start_menu=start, desktop_folder=desktop)
+    assert [p.name for p in created] == ["VisageCam.lnk", "VisageCam.lnk"]
+    assert all(p.exists() for p in created)
+    script = "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:VC); $s.TargetPath; $s.Arguments; $s.IconLocation"
+    info = subprocess.run(["powershell", "-NoProfile", "-Command", script], capture_output=True, text=True,
+                          env={**__import__("os").environ, "VC": str(created[0])}).stdout.splitlines()
+    assert info[0].lower().endswith(("pythonw.exe", "python.exe")) and info[1] == "-m visagecam"
+    assert info[2].endswith("visagecam.ico,0") and shortcuts.icon_path().exists()
+    assert len(shortcuts.remove(start_menu=start, desktop_folder=desktop)) == 2
+    assert shortcuts.remove(start_menu=start, desktop_folder=desktop) == []
+
+
+def test_cli_flags_do_not_start_the_app(tmp_path, monkeypatch):
+    import visagecam.shortcuts as shortcuts
+    from visagecam.__main__ import main
+
+    calls = []
+    monkeypatch.setattr(shortcuts, "install", lambda desktop=False: calls.append(("install", desktop)) or [tmp_path / "x.lnk"])
+    monkeypatch.setattr(shortcuts, "remove", lambda: calls.append(("remove",)) or [])
+    assert main(["--install-shortcuts", "--desktop"]) == 0
+    assert main(["--remove-shortcuts"]) == 0
+    assert calls == [("install", True), ("remove",)]
