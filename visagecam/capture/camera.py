@@ -69,19 +69,26 @@ class CameraCapture:
 
     def open(self, index: int, width: int, height: int, fps: int) -> None:
         self.close()
-        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
-        if not cap.isOpened():
-            cap.release()
+        cap = None
+        frame = None
+        for backend in (cv2.CAP_MSMF, cv2.CAP_DSHOW):
+            candidate = cv2.VideoCapture(index, backend)
+            if not candidate.isOpened():
+                candidate.release()
+                continue
+            candidate.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            candidate.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            candidate.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+            candidate.set(cv2.CAP_PROP_FPS, fps)
+            candidate.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            ok, first = candidate.read()
+            if ok and first is not None:
+                cap, frame = candidate, first
+                log.info("Captura con el backend %s", candidate.getBackendName())
+                break
+            candidate.release()
+        if cap is None or frame is None:
             raise CameraError(f"No se pudo abrir la camara {index}")
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        cap.set(cv2.CAP_PROP_FPS, fps)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        ok, frame = cap.read()
-        if not ok or frame is None:
-            cap.release()
-            raise CameraError(f"La camara {index} no entrega imagen")
         self.height, self.width = frame.shape[:2]
         self.fps = cap.get(cv2.CAP_PROP_FPS) or float(fps)
         log.info("Camara %d abierta a %dx%d @ %.1f fps", index, self.width, self.height, self.fps)

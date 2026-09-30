@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
@@ -13,14 +14,25 @@ from visagecam.processing.landmarks import (
     LIPS_INNER,
     face_width,
     mesh_triangles,
+    mouth_open_ratio,
 )
 from visagecam.processing.transforms import adjustment, apply_points
 
 
+@dataclass
+class FaceLayer:
+    x0: int
+    y0: int
+    bgr: np.ndarray
+    alpha: np.ndarray
+    cover: np.ndarray
+    inner: np.ndarray
+
+
 class FaceTexture:
-    def __init__(self, mask: Mask) -> None:
-        image = mask.image
-        points = mask.face_landmarks.astype(np.float32)
+    def __init__(self, image: np.ndarray, points: np.ndarray) -> None:
+        points = points.astype(np.float32)
+        self.image = image
         self.width = max(face_width(points), 1.0)
         self.triangles = mesh_triangles()
         self.levels: list[tuple[np.ndarray, np.ndarray]] = []
@@ -43,17 +55,22 @@ class FaceTexture:
         return self.levels[min(max(level, 0), len(self.levels) - 1)]
 
 
+def _smoothstep(edge0: float, edge1: float, x: float) -> float:
+    t = min(max((x - edge0) / (edge1 - edge0), 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
 class FaceWarpRenderer:
     def __init__(self) -> None:
         self._textures: dict[str, FaceTexture] = {}
         self._live_mean: np.ndarray | None = None
         self._live_std: np.ndarray | None = None
 
-    def texture(self, mask: Mask) -> FaceTexture:
-        tex = self._textures.get(mask.mask_id)
-        if tex is None or tex.levels[0][0] is not mask.image:
-            tex = FaceTexture(mask)
-            self._textures[mask.mask_id] = tex
+    def texture(self, key: str, image: np.ndarray, points: np.ndarray) -> FaceTexture:
+        tex = self._textures.get(key)
+        if tex is None or tex.image is not image:
+            tex = FaceTexture(image, points)
+            self._textures[key] = tex
         return tex
 
     def reset(self) -> None:
@@ -73,17 +90,18 @@ class FaceWarpRenderer:
         c = s0 - a * p0[:, 0:1] - b * p0[:, 1:2]
         return a, b, c
 
-    def draw(self, frame: np.ndarray, mask: Mask, landmarks: np.ndarray, settings: Settings) -> None:
+    def render(
+        self,
+        frame: np.ndarray,
+        key: str,
+        image: np.ndarray,
+        src_points: np.ndarray,
+        dst: np.ndarray,
+        live: np.ndarray,
+        settings: Settings,
+        photo: bool,
+    ) -> FaceLayer | None:
         height, width = frame.shape[:2]
-        fw = face_width(landmarks)
-        center = landmarks[FACE_OVAL].mean(axis=0)
-        adj = adjustment(
-            center,
-            settings.mask_scale,
-            settings.mask_rotation,
-            (settings.mask_offset_x * fw, settings.mask_offset_y * fw),
-        )
-        dst = apply_points(adj, landmarks[:468])
         pad = 3
         x0 = int(max(0, math.floor(dst[:, 0].min()) - pad))
         y0 = int(max(0, math.floor(dst[:, 1].min()) - pad))
@@ -91,9 +109,10 @@ class FaceWarpRenderer:
         y1 = int(min(height, math.ceil(dst[:, 1].max()) + pad))
         bw, bh = x1 - x0, y1 - y0
         if bw < 24 or bh < 24:
-            return
-        tex = self.texture(mask)
-        image, src_tri = tex.pick_level(face_width(dst))
+            return None
+        tex = self.texture(key, image, src_points)
+        live_width = face_width(dst)
+        level_image, src_tri = tex.pick_level(live_width)
         local = dst - np.array([x0, y0], dtype=np.float32)
         dst_tri = local[tex.triangles]
 
@@ -103,7 +122,7 @@ class FaceWarpRenderer:
             cv2.fillConvexPoly(idmap, poly[i], i + 1, cv2.LINE_8, 4)
         ys, xs = np.nonzero(idmap)
         if len(xs) < 64:
-            return
+            return None
         tri = idmap[ys, xs] - 1
         a, b, c = self._coefficients(dst_tri, src_tri)
         fx = xs.astype(np.float32)
@@ -112,32 +131,55 @@ class FaceWarpRenderer:
         map_y = np.full((bh, bw), -1.0, np.float32)
         map_x[ys, xs] = a[tri, 0] * fx + b[tri, 0] * fy + c[tri, 0]
         map_y[ys, xs] = a[tri, 1] * fx + b[tri, 1] * fy + c[tri, 1]
-        warped = cv2.remap(image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+        warped = cv2.remap(level_image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
 
         cover = (idmap > 0).astype(np.uint8) * 255
+        cv2.fillPoly(cover, [np.round(local[LIPS_INNER] * 16).astype(np.int32)], 255, cv2.LINE_8, 4)
         softness = float(np.clip(settings.edge_softness, 0.0, 1.0))
-        live_width = face_width(dst)
-        erode = max(1, int(live_width * 0.022))
+        erode = max(1, int(live_width * (0.02 if photo else 0.035)))
         cover = cv2.erode(cover, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (erode * 2 + 1, erode * 2 + 1)))
-        sigma = max(0.8, live_width * (0.012 + 0.03 * softness))
+        sigma = max(0.8, live_width * ((0.012 + 0.03 * softness) if photo else 0.045))
         cover = cv2.GaussianBlur(cover, (0, 0), sigma)
-        alpha = cover.astype(np.float32) / 255.0 * (warped[:, :, 3].astype(np.float32) / 255.0)
+        cover_f = cover.astype(np.float32) / 255.0
+        inner = warped[:, :, 3].astype(np.float32) / 255.0
 
         if settings.keep_eyes_mouth:
             hole = np.zeros((bh, bw), np.uint8)
-            for ring in (EYE_RING_LEFT, EYE_RING_RIGHT, LIPS_INNER):
-                cv2.fillPoly(hole, [np.round(local[ring] * 16).astype(np.int32)], 255, cv2.LINE_AA, 4)
-            grow = max(1, int(live_width * 0.018))
-            hole = cv2.dilate(hole, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (grow * 2 + 1, grow * 2 + 1)))
-            hole = cv2.GaussianBlur(hole, (0, 0), max(1.0, live_width * 0.014))
-            alpha *= 1.0 - hole.astype(np.float32) / 255.0
+            if photo:
+                for ring in (EYE_RING_LEFT, EYE_RING_RIGHT):
+                    cv2.fillPoly(hole, [np.round(local[ring] * 16).astype(np.int32)], 255, cv2.LINE_AA, 4)
+            reveal = _smoothstep(0.016, 0.055, mouth_open_ratio(live))
+            if reveal > 0.02:
+                mouth = np.zeros((bh, bw), np.uint8)
+                cv2.fillPoly(mouth, [np.round(local[LIPS_INNER] * 16).astype(np.int32)], 255, cv2.LINE_AA, 4)
+                hole = np.maximum(hole, (mouth * reveal).astype(np.uint8))
+            if hole.any():
+                grow = max(1, int(live_width * 0.016))
+                hole = cv2.dilate(hole, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (grow * 2 + 1, grow * 2 + 1)))
+                hole = cv2.GaussianBlur(hole, (0, 0), max(1.0, live_width * 0.013))
+                inner *= 1.0 - hole.astype(np.float32) / 255.0
 
-        alpha *= float(np.clip(settings.mask_opacity, 0.0, 1.0))
         layer = warped[:, :, :3]
         strength = float(np.clip(settings.color_match, 0.0, 1.0))
-        if strength > 0.01:
+        if photo and strength > 0.01:
             layer = self._match_color(layer, frame[y0:y1, x0:x1], cover, tex, strength)
-        blend_alpha(frame, x0, y0, layer, alpha)
+        return FaceLayer(x0, y0, layer, cover_f * inner, cover_f, inner)
+
+    def draw(self, frame: np.ndarray, mask: Mask, landmarks: np.ndarray, settings: Settings) -> None:
+        fw = face_width(landmarks)
+        center = landmarks[FACE_OVAL].mean(axis=0)
+        adj = adjustment(
+            center,
+            settings.mask_scale,
+            settings.mask_rotation,
+            (settings.mask_offset_x * fw, settings.mask_offset_y * fw),
+        )
+        dst = apply_points(adj, landmarks[:468])
+        layer = self.render(frame, mask.mask_id, mask.image, mask.face_landmarks, dst, landmarks, settings, True)
+        if layer is None:
+            return
+        alpha = layer.alpha * float(np.clip(settings.mask_opacity, 0.0, 1.0))
+        blend_alpha(frame, layer.x0, layer.y0, layer.bgr, alpha)
 
     def _match_color(self, layer: np.ndarray, live: np.ndarray, cover: np.ndarray, tex: FaceTexture, strength: float) -> np.ndarray:
         scale = 96.0 / max(live.shape[1], 1)

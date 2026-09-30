@@ -8,7 +8,7 @@ import numpy as np
 from visagecam.capture import CameraCapture, CameraError
 from visagecam.config import Settings
 from visagecam.masks.library import MaskLibrary
-from visagecam.output import VirtualCameraError, VirtualCameraOutput
+from visagecam.output import MjpegServer, VirtualCameraError, VirtualCameraOutput
 from visagecam.processing.pipeline import FramePipeline
 
 log = logging.getLogger(__name__)
@@ -19,6 +19,7 @@ class Engine:
         self.settings = settings
         self.capture = CameraCapture()
         self.output = VirtualCameraOutput()
+        self.stream = MjpegServer(settings.stream_port)
         self._pipeline = FramePipeline(settings, library)
         self._thread: threading.Thread | None = None
         self._running = False
@@ -47,11 +48,13 @@ class Engine:
         s = self.settings
         self.error = ""
         try:
-            self.capture.open(s.camera_index, s.width, s.height, s.fps)
+            cap_w, cap_h = (1920, 1080) if s.hq_capture and s.height <= 720 else (s.width, s.height)
+            self.capture.open(s.camera_index, cap_w, cap_h, s.fps)
         except CameraError as exc:
             self.error = str(exc)
             raise
         self.target = (s.width, s.height)
+        self.stream.start()
         self._running = True
         self._thread = threading.Thread(target=self._loop, name="engine", daemon=True)
         self._thread.start()
@@ -63,12 +66,21 @@ class Engine:
             thread.join(timeout=3.0)
         self.capture.close()
         self.output.stop()
+        self.stream.stop()
         with self._lock:
             self._latest = None
 
     def shutdown(self) -> None:
         self.stop()
         self._pipeline.close()
+
+    def recalibrate(self) -> None:
+        self._pipeline.recalibrate()
+
+    @property
+    def calibration(self) -> tuple[bool, float]:
+        neutral = self._pipeline.neutral
+        return neutral.ready, neutral.progress
 
     def start_virtual(self) -> None:
         width, height = self.target
@@ -109,6 +121,7 @@ class Engine:
                     log.exception("Error enviando a la camara virtual")
                     self.error = f"Camara virtual: {exc}"
                     self.output.stop()
+            self.stream.publish(result)
             with self._lock:
                 self._latest = result
                 self._frame_id += 1

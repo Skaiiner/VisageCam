@@ -21,6 +21,12 @@ def similarity(src: np.ndarray, dst: np.ndarray) -> np.ndarray:
     return np.hstack([rot, t[:, None]])
 
 
+def affine_fit(src: np.ndarray, dst: np.ndarray) -> np.ndarray:
+    design = np.hstack([np.asarray(src, dtype=np.float64), np.ones((len(src), 1))])
+    solution, *_ = np.linalg.lstsq(design, np.asarray(dst, dtype=np.float64), rcond=None)
+    return solution.T
+
+
 def to3(m: np.ndarray) -> np.ndarray:
     out = np.eye(3)
     out[:2, :] = m

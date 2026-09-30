@@ -130,10 +130,16 @@ class MainWindow(QMainWindow):
             self.resolution_combo.addItem(f"{width} x {height}", (width, height))
         form.addRow("Resolucion", self.resolution_combo)
         self.mirror_check = QCheckBox("Espejo")
+        self.hq_check = QCheckBox("Captura en alta calidad (1080p reescalado)")
         form.addRow("", self.mirror_check)
+        form.addRow("", self.hq_check)
+        self.sl_enhance = SliderRow("Mejora imagen", 0, 100, 50, 1, " %")
+        self.sl_enhance.changed.connect(lambda v: self._set("enhance", v / 100.0))
+        form.addRow(self.sl_enhance)
         self.camera_combo.activated.connect(self._camera_changed)
         self.resolution_combo.activated.connect(self._camera_changed)
         self.mirror_check.toggled.connect(lambda v: self._set("mirror", bool(v)))
+        self.hq_check.toggled.connect(self._hq_toggled)
         return box
 
     def _build_masks_tab(self) -> QWidget:
@@ -188,8 +194,14 @@ class MainWindow(QMainWindow):
         self.eyes_check = QCheckBox("Conservar mis ojos y mi boca")
         self.warp_check.toggled.connect(lambda v: self._set("face_warp", bool(v)))
         self.eyes_check.toggled.connect(lambda v: self._set("keep_eyes_mouth", bool(v)))
+        self.expr_check = QCheckBox("Seguir mis gestos (boca, mejillas, cejas)")
+        self.expr_check.toggled.connect(lambda v: self._set("expression", bool(v)))
+        layout.addWidget(self.expr_check)
         layout.addWidget(self.warp_check)
         layout.addWidget(self.eyes_check)
+        calibrate = QPushButton("Recalibrar mi rostro (mira de frente, boca cerrada)")
+        calibrate.clicked.connect(self.engine.recalibrate)
+        layout.addWidget(calibrate)
         reset = QPushButton("Restablecer ajustes")
         reset.clicked.connect(self._reset_adjustments)
         layout.addWidget(reset)
@@ -311,9 +323,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(switch)
         layout.addWidget(QLabel("Fuentes de la escena (marca para activar)"))
         add_source = QPushButton("Anadir camara VisageCam a la escena")
-        add_source.setToolTip("Crea en OBS un Dispositivo de captura de video con la camara de VisageCam")
+        add_source.setToolTip("Crea en OBS una fuente con la camara de VisageCam (dispositivo o flujo local)")
         add_source.clicked.connect(self._obs_add_camera)
         layout.addWidget(add_source)
+        url_label = QLabel(f"Fuente sin controladores: Fuente multimedia con {self.engine.stream.url}")
+        url_label.setObjectName("hint")
+        url_label.setWordWrap(True)
+        url_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        layout.addWidget(url_label)
         self.item_list = QListWidget()
         self.item_list.itemChanged.connect(self._obs_item_toggled)
         layout.addWidget(self.item_list, 1)
@@ -342,6 +359,9 @@ class MainWindow(QMainWindow):
         self.warp_check.setChecked(s.face_warp)
         self.eyes_check.setChecked(s.keep_eyes_mouth)
         self.mirror_check.setChecked(s.mirror)
+        self.hq_check.setChecked(s.hq_capture)
+        self.expr_check.setChecked(s.expression)
+        self.sl_enhance.set_value(s.enhance * 100)
         self.backend_combo.setCurrentIndex(max(self.backend_combo.findData(s.virtual_backend), 0))
         {"none": self.bg_none, "blur": self.bg_blur, "image": self.bg_image}.get(
             s.background_mode, self.bg_none
@@ -525,6 +545,11 @@ class MainWindow(QMainWindow):
         elif self.camera_combo.count():
             self.settings.camera_index = self.camera_combo.itemData(0)
 
+    def _hq_toggled(self, checked: bool) -> None:
+        if self.settings.hq_capture != bool(checked):
+            self._set("hq_capture", bool(checked))
+            self._start_camera()
+
     def _camera_changed(self) -> None:
         if self.camera_combo.currentData() is not None:
             self.settings.camera_index = int(self.camera_combo.currentData())
@@ -572,8 +597,11 @@ class MainWindow(QMainWindow):
                 pixmap.scaled(self.preview.size(), Qt.KeepAspectRatio, Qt.FastTransformation)
             )
         parts = [f"{self.engine.fps:4.1f} fps", f"{self.engine.process_ms:4.1f} ms"]
-        if self.settings.active_mask:
+        if self.settings.active_mask or self.settings.accessories:
             parts.append("rostro detectado" if self.engine.face_found else "sin rostro")
+        ready, progress = self.engine.calibration
+        if self.settings.expression and not ready and self.engine.face_found:
+            parts.append(f"calibrando gestos {int(progress * 100)}% (mira de frente, boca cerrada)")
         if self.engine.virtual_active:
             parts.append(f"emitiendo en {self.engine.output.device}")
         if self.engine.error:
@@ -654,7 +682,7 @@ class MainWindow(QMainWindow):
             return
         self.obs_status.setText("Anadiendo camara a OBS...")
         self.runner.run(
-            lambda: self.obs.add_camera_source(scene),
+            lambda: self.obs.add_camera_source(scene, stream_url=self.engine.stream.url),
             lambda name: (self.obs_status.setText(f"Camara anadida a la escena {scene} ({name})"), self._obs_scene_view()),
             self._obs_failed,
         )

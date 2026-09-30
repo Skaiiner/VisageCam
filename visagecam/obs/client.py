@@ -190,7 +190,7 @@ class ObsClient:
             for i in data["sceneItems"]
         ]
 
-    def add_camera_source(self, scene: str, source_name: str = "VisageCam",
+    def add_camera_source(self, scene: str, source_name: str = "VisageCam", stream_url: str = "",
                           tokens: tuple[str, ...] = ("unity video capture", "visagecam")) -> str:
         data = self.request(
             "GetInputPropertiesListPropertyItems",
@@ -201,21 +201,35 @@ class ObsClient:
             None,
         )
         if device is None:
-            raise ObsError("OBS no ve el dispositivo de VisageCam. Instala Unity Capture y reinicia OBS.")
+            if not stream_url:
+                raise ObsError("OBS no ve el dispositivo de VisageCam. Instala Unity Capture y reinicia OBS.")
+            settings = {
+                "is_local_file": False,
+                "input": stream_url,
+                "input_format": "mjpeg",
+                "buffering_mb": 1,
+                "restart_on_activate": False,
+                "close_when_inactive": False,
+                "hw_decode": False,
+            }
+            kind, label = "ffmpeg_source", "flujo local de VisageCam"
+        else:
+            settings = {"video_device_id": device["itemValue"]}
+            kind, label = "dshow_input", device["itemName"]
         try:
             self.request(
                 "CreateInput",
                 {
                     "sceneName": scene,
                     "inputName": source_name,
-                    "inputKind": "dshow_input",
-                    "inputSettings": {"video_device_id": device["itemValue"]},
+                    "inputKind": kind,
+                    "inputSettings": settings,
                     "sceneItemEnabled": True,
                 },
             )
         except ObsError:
             self.request("CreateSceneItem", {"sceneName": scene, "sourceName": source_name})
-        return device["itemName"]
+        return label
 
     def set_item_enabled(self, scene: str, item_id: int, enabled: bool) -> None:
         self.request(

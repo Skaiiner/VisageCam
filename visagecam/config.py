@@ -21,7 +21,11 @@ class Settings:
     height: int = 720
     fps: int = 30
     mirror: bool = False
+    hq_capture: bool = True
+    enhance: float = 0.5
+    expression: bool = True
     virtual_backend: str = "auto"
+    stream_port: int = 8765
 
     active_mask: str = ""
     mask_scale: float = 1.0

@@ -13,11 +13,13 @@ from visagecam.processing.landmarks import (
     FACE_EDGE_RIGHT,
     FACE_OVAL,
     FOREHEAD,
+    STABLE_POINTS,
     face_roll,
     face_width,
     group_center,
 )
-from visagecam.processing.transforms import adjustment, similarity, to3
+from visagecam.processing.face_warp import FaceWarpRenderer
+from visagecam.processing.transforms import adjustment, affine_fit, apply_points, similarity, to3
 
 SLOT_WIDTH = {"head": 1.15, "eyes": 1.05, "mouth": 0.55, "ears": 1.3, "free": 1.6}
 UPPER_LIP = (0,)
@@ -46,7 +48,7 @@ class OverlayRenderer:
     @staticmethod
     def _slot_target(slot: str, landmarks: np.ndarray, up: np.ndarray, fw: float) -> np.ndarray:
         if slot == "head":
-            return group_center(landmarks, FOREHEAD) + up * (0.02 * fw)
+            return group_center(landmarks, FOREHEAD) - up * (0.04 * fw)
         if slot == "eyes":
             return (group_center(landmarks, EYE_LEFT) + group_center(landmarks, EYE_RIGHT)) / 2.0
         if slot == "mouth":
@@ -56,7 +58,12 @@ class OverlayRenderer:
         return landmarks[FACE_OVAL].mean(axis=0)
 
     @classmethod
-    def _base(cls, mask: Mask, landmarks: np.ndarray) -> np.ndarray:
+    def _base(cls, mask: Mask, landmarks: np.ndarray, canon: np.ndarray | None = None) -> np.ndarray:
+        if canon is not None:
+            sim = similarity(canon[STABLE_POINTS], landmarks[STABLE_POINTS])
+            aff = affine_fit(canon[STABLE_POINTS], landmarks[STABLE_POINTS])
+            ratio = abs(np.linalg.det(aff[:, :2])) / max(abs(np.linalg.det(sim[:, :2])), 1e-9)
+            return to3(aff if 0.55 < ratio < 1.8 else sim)
         if mask.anchors:
             src = np.array([a.point for a in mask.anchors], dtype=np.float64)
             dst = np.array([group_center(landmarks, a.landmarks) for a in mask.anchors], dtype=np.float64)
@@ -99,6 +106,23 @@ class OverlayRenderer:
         ratio = (self._luma + 20.0) / (mask.mean_luma + 20.0)
         return float(np.clip(ratio ** (0.8 * amount), 0.55, 1.5))
 
+    @staticmethod
+    def _merge_face(warped: np.ndarray, x0: int, y0: int, layer) -> np.ndarray:
+        lh, lw = layer.alpha.shape
+        fx0, fy0 = max(layer.x0, x0), max(layer.y0, y0)
+        fx1, fy1 = min(layer.x0 + lw, x0 + warped.shape[1]), min(layer.y0 + lh, y0 + warped.shape[0])
+        if fx1 <= fx0 or fy1 <= fy0:
+            return warped
+        sl_l = (slice(fy0 - layer.y0, fy1 - layer.y0), slice(fx0 - layer.x0, fx1 - layer.x0))
+        sl_w = (slice(fy0 - y0, fy1 - y0), slice(fx0 - x0, fx1 - x0))
+        cover = layer.cover[sl_l][..., None]
+        inner = layer.inner[sl_l]
+        face = np.dstack([layer.bgr[sl_l].astype(np.float32) * inner[..., None], inner * 255.0])
+        merged = warped[sl_w].astype(np.float32) * (1.0 - cover) + face * cover
+        out = warped.copy()
+        out[sl_w] = np.clip(merged, 0, 255).astype(np.uint8)
+        return out
+
     def draw(
         self,
         frame: np.ndarray,
@@ -107,6 +131,7 @@ class OverlayRenderer:
         settings: Settings,
         adjust: tuple[float, float, float, float] | None = None,
         opacity: float | None = None,
+        expression: tuple[FaceWarpRenderer, np.ndarray] | None = None,
     ) -> None:
         height, width = frame.shape[:2]
         fw = face_width(landmarks)
@@ -114,7 +139,8 @@ class OverlayRenderer:
             adjust = (settings.mask_scale, settings.mask_rotation, settings.mask_offset_x, settings.mask_offset_y)
         if opacity is None:
             opacity = float(np.clip(settings.mask_opacity, 0.0, 1.0))
-        base = self._base(mask, landmarks)
+        canon = expression[1] if expression is not None else None
+        base = self._base(mask, landmarks, canon)
         center = landmarks[FACE_OVAL].mean(axis=0)
         roll = face_roll(landmarks)
         right = np.array([math.cos(roll), math.sin(roll)])
@@ -152,6 +178,11 @@ class OverlayRenderer:
         softness = float(np.clip(settings.edge_softness, 0.0, 1.0))
         if softness > 0.35:
             warped = cv2.GaussianBlur(warped, (0, 0), 0.4 + softness)
+        if expression is not None:
+            dst = apply_points(adj, landmarks[:468])
+            layer = expression[0].render(frame, mask.mask_id + "#expr", mask.image, canon, dst, landmarks, settings, False)
+            if layer is not None:
+                warped = self._merge_face(warped, x0, y0, layer)
         gain = self._light_gain(frame, landmarks, mask, float(settings.light_match))
         alpha = warped[:, :, 3].astype(np.float32) / 255.0 * opacity
         pre = warped[:, :, :3].astype(np.float32) * (gain * opacity)
