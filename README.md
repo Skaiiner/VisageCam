@@ -30,6 +30,14 @@ python -m visagecam
 
 Tambien puedes usar `scripts\run.bat`. Para desarrollo: `pip install -e ".[dev]"` y `scripts\run_tests.bat`.
 
+### Abrir desde el menu Inicio
+
+```bash
+python -m visagecam --install-shortcuts --desktop
+```
+
+Crea el acceso directo **VisageCam** en el menu Inicio (y en el escritorio con `--desktop`), con su icono y sin ventana de consola. Busca "VisageCam" en Inicio y pulsa **Anclar a Inicio** si quieres fijarlo. Para quitarlos: `python -m visagecam --remove-shortcuts`. Tambien puedes ejecutar `scripts/install_shortcuts.bat`.
+
 ## Uso
 
 1. Elige la camara en **Camara**; la vista previa arranca sola.

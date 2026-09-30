@@ -261,8 +261,7 @@ def test_mirror_modes(window, errors):
     window.mirror_bar.changed.emit("preview")
     wait_for(lambda: window.preview._frame is not None)
     _, raw = window.engine.latest()
-    QTest.qWait(150)
-    assert np.array_equal(window.preview._frame, raw[:, ::-1])
+    assert wait_for(lambda: window.preview._frame is not None and np.array_equal(window.preview._frame, raw[:, ::-1]), 6)
     assert not errors
 
 

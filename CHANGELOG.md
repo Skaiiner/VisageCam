@@ -2,6 +2,7 @@
 
 ## 1.2.0
 
+- Accesos directos en el menu Inicio y el escritorio (`--install-shortcuts`), icono propio y arranque sin consola.
 - Modo espejo configurable: apagado, solo vista previa o vista previa y salida, con selector en la barra inferior.
 - La camara se abre en segundo plano para que la ventana no se congele.
 - Estructura del repositorio con `src/`, `tests/`, `docs/` y `scripts/`, y `pyproject.toml`.

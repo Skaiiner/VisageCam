@@ -9,6 +9,7 @@
 | La mascara no sigue mis gestos | Mira de frente con la boca cerrada y pulsa **Recalibrar mi rostro**. |
 | El filtro desaparece al girar mucho la cabeza | Con giros extremos el detector pierde la cara; el filtro se mantiene un instante y vuelve al recuperarla. |
 | Rendimiento bajo | Baja la resolucion, desactiva fondo o belleza, o reduce los accesorios. |
+| El acceso directo no abre la aplicacion | Vuelve a crearlo con `python -m visagecam --install-shortcuts` desde el entorno virtual del proyecto. |
 
 ## Registros y configuracion
 
