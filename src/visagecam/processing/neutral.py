@@ -43,8 +43,8 @@ def yaw_estimate(points: np.ndarray) -> float:
 
 
 class NeutralFace:
-    def __init__(self) -> None:
-        self.path = data_dir() / "neutral_face.json"
+    def __init__(self, suffix: str = "") -> None:
+        self.path = data_dir() / f"neutral_face{suffix}.json"
         self.points: np.ndarray | None = None
         self.version = 0
         self.calibrating = False

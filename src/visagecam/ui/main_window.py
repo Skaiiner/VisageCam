@@ -32,6 +32,7 @@ from visagecam.ui.pages import (
     CameraPage,
     FiltersPage,
     ObsPage,
+    Person2Page,
 )
 from visagecam.ui.studio import ImageStudio, first_image_path
 from visagecam.ui.theme import enable_dark_titlebar
@@ -44,6 +45,7 @@ NAV_ICONS = {
     "filters": "mask",
     "accessories": "hat",
     "beauty": "sparkle",
+    "person2": "face",
     "background": "image",
     "camera": "camera",
     "obs": "plug",
@@ -124,6 +126,7 @@ class MainWindow(QMainWindow):
             ("filters", "Filtros"),
             ("accessories", "Accesorios"),
             ("beauty", "Belleza"),
+            ("person2", "Persona 2"),
             ("background", "Fondo"),
             ("camera", "Camara"),
             ("obs", "OBS"),
@@ -181,9 +184,10 @@ class MainWindow(QMainWindow):
 
         self.stack = QStackedWidget()
         self.stack.setFixedWidth(430)
-        self.filters = FiltersPage(self.ctx, self.open_studio)
-        self.accessories = AccessoriesPage(self.ctx, self.open_studio)
+        self.filters = FiltersPage(self.ctx, lambda kind: self.open_studio(kind, 1))
+        self.accessories = AccessoriesPage(self.ctx, lambda kind: self.open_studio(kind, 1))
         self.beauty = BeautyPage(self.ctx)
+        self.person2 = Person2Page(self.ctx, self.open_studio)
         self.background = BackgroundPage(self.ctx)
         self.camera = CameraPage(self.ctx, self._camera_changed)
         self.obs = ObsPage(self.ctx)
@@ -192,6 +196,7 @@ class MainWindow(QMainWindow):
             "filters": self.filters,
             "accessories": self.accessories,
             "beauty": self.beauty,
+            "person2": self.person2,
             "background": self.background,
             "camera": self.camera,
             "obs": self.obs,
@@ -229,13 +234,20 @@ class MainWindow(QMainWindow):
         super().showEvent(event)
         enable_dark_titlebar(self)
 
-    def open_studio(self, kind: str = "mask", path: Path | None = None) -> None:
+    def open_studio(self, kind: str = "mask", person: int = 1, path: Path | None = None) -> None:
         dialog = ImageStudio(self.ctx, self, kind, path)
         enable_dark_titlebar(dialog)
         if dialog.exec() != QDialog.Accepted or dialog.result_item is None:
             return
         item = dialog.result_item
-        if item.kind == "mask":
+        if person == 2:
+            if item.kind == "mask":
+                self.person2.populate()
+                self.person2.select_mask(item.mask_id)
+            else:
+                self.person2.add_and_enable_accessory(item.mask_id)
+            self.show_page("person2")
+        elif item.kind == "mask":
             self.filters.populate()
             self.filters.select(item.mask_id)
             self.show_page("filters")
@@ -252,8 +264,10 @@ class MainWindow(QMainWindow):
         path = first_image_path(event.mimeData())
         if path is not None:
             event.acceptProposedAction()
-            kind = "accessory" if self.stack.currentWidget() is self.accessories else "mask"
-            QTimer.singleShot(0, lambda: self.open_studio(kind, path))
+            current = self.stack.currentWidget()
+            person = 2 if current is self.person2 else 1
+            kind = "accessory" if current is self.accessories else "mask"
+            QTimer.singleShot(0, lambda: self.open_studio(kind, person, path))
 
     def _camera_changed(self) -> None:
         self._camera_wanted = True
@@ -331,14 +345,20 @@ class MainWindow(QMainWindow):
         self.pill_fps.setText(f"{engine.fps:.0f} fps  |  {engine.process_ms:.0f} ms")
         set_tone(self.pill_fps, "ok" if engine.fps >= 24 else ("warn" if engine.fps > 0 else ""))
         s = self.settings
-        wants_face = bool(s.active_mask or s.accessories or s.beauty_smooth or s.beauty_lips
-                          or s.beauty_bright or s.beauty_teeth)
-        if wants_face:
-            self.pill_face.setText("Rostro detectado" if engine.face_found else "Sin rostro")
-            set_tone(self.pill_face, "ok" if engine.face_found else "warn")
+        if s.dual_faces:
+            found = engine.faces_found
+            count = sum(found)
+            self.pill_face.setText(f"{count}/2 rostros")
+            set_tone(self.pill_face, "ok" if count == 2 else ("warn" if count == 1 else ""))
         else:
-            self.pill_face.setText("Sin filtros")
-            set_tone(self.pill_face, "")
+            wants_face = bool(s.active_mask or s.accessories or s.beauty_smooth or s.beauty_lips
+                              or s.beauty_bright or s.beauty_teeth)
+            if wants_face:
+                self.pill_face.setText("Rostro detectado" if engine.face_found else "Sin rostro")
+                set_tone(self.pill_face, "ok" if engine.face_found else "warn")
+            else:
+                self.pill_face.setText("Sin filtros")
+                set_tone(self.pill_face, "")
         if engine.virtual_active:
             self.pill_out.setText(f"Emitiendo: {engine.output.device}")
             set_tone(self.pill_out, "ok")

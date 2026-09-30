@@ -5,14 +5,14 @@ from concurrent.futures import ThreadPoolExecutor
 import cv2
 import numpy as np
 
-from visagecam.config import Settings
+from visagecam.config import FilterProfile, Settings
 from visagecam.masks.library import MaskLibrary
 from visagecam.processing.background import BackgroundRenderer
 from visagecam.processing.beauty import BeautyRenderer
 from visagecam.processing.blend import mix
 from visagecam.processing.enhance import Denoiser, Enhancer
 from visagecam.processing.face_warp import FaceWarpRenderer
-from visagecam.processing.landmarks import FaceTracker, face_width
+from visagecam.processing.landmarks import FaceTracker, MultiFaceTracker, face_width
 from visagecam.processing.neutral import NeutralFace
 from visagecam.processing.overlay import OverlayRenderer
 
@@ -33,6 +33,7 @@ class FramePipeline:
         self.settings = settings
         self.library = library
         self._tracker: FaceTracker | None = None
+        self._multi_tracker: MultiFaceTracker | None = None
         self._background = BackgroundRenderer()
         self._overlay = OverlayRenderer()
         self._face = FaceWarpRenderer()
@@ -41,11 +42,13 @@ class FramePipeline:
         self._denoiser = Denoiser()
         self._pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="visagecam")
         self.neutral = NeutralFace()
+        self.neutral2 = NeutralFace(suffix="_2")
         self.face_found = False
+        self.faces_found = (False, False)
         self._last_error = 0.0
 
-    def recalibrate(self) -> None:
-        self.neutral.start_calibration()
+    def recalibrate(self, person: int = 1) -> None:
+        (self.neutral if person == 1 else self.neutral2).start_calibration()
 
     def process(self, frame: np.ndarray) -> np.ndarray:
         settings = self.settings
@@ -53,10 +56,10 @@ class FramePipeline:
             frame = cv2.flip(frame, 1)
         height, width = frame.shape[:2]
         amount = float(settings.enhance)
-        mask = self.library.get(settings.active_mask) if settings.active_mask else None
-        extras = [a for a in (self.library.get(i) for i in settings.accessories) if a is not None]
-        beauty = BeautyRenderer.active(settings)
-        need_track = mask is not None or bool(extras) or beauty
+        dual = bool(settings.dual_faces)
+        profile1 = settings.primary_profile()
+        profiles = (profile1, settings.person2) if dual else (profile1,)
+        need_track = dual or any(self._profile_needs_face(p) for p in profiles)
         need_bg = settings.background_mode != "none"
 
         small, factor = frame, 1.0
@@ -66,66 +69,118 @@ class FramePipeline:
         if need_track or need_bg or amount > 0.01:
             self._enhancer.prepare(small, amount)
         track_job = backdrop_job = None
-        if need_track or need_bg:
+        if need_track:
             tone = self._enhancer.tone(small, amount)
-            if need_track:
+            if dual:
+                if self._multi_tracker is None:
+                    self._multi_tracker = MultiFaceTracker()
+                track_job = self._pool.submit(self._multi_tracker.process, tone, factor)
+            else:
                 if self._tracker is None:
                     self._tracker = FaceTracker()
                 track_job = self._pool.submit(self._tracker.process, tone, factor)
-            if need_bg:
-                backdrop_job = self._pool.submit(self._backdrop, tone, (width, height))
+        if need_bg:
+            tone = self._enhancer.tone(small, amount)
+            backdrop_job = self._pool.submit(self._backdrop, tone, (width, height))
 
         full = self._enhancer.finish(self._denoiser.apply(frame, amount), amount)
         owned = full is not frame
 
-        landmarks = None
-        if track_job is not None:
-            try:
-                landmarks = track_job.result()
-            except Exception:
-                log.exception("Error en el seguimiento facial")
-                landmarks = None
-            if not usable(landmarks, full):
-                landmarks = None
-            if landmarks is not None:
-                if settings.expression and not self.neutral.ready:
-                    self.neutral.observe(landmarks)
-            else:
-                landmarks = self._tracker.held()
-                if not usable(landmarks, full):
-                    landmarks = None
-                if landmarks is None:
-                    self._overlay.reset()
-                    self._face.reset()
-        self.face_found = landmarks is not None
+        people: list[tuple[FilterProfile, np.ndarray, NeutralFace] | None]
+        if dual:
+            people = self._resolve_dual(track_job, full)
+        else:
+            people = self._resolve_single(track_job, full, profile1)
+
+        self.faces_found = tuple(p is not None for p in people) if dual else (people[0] is not None, False)
+        self.face_found = self.faces_found[0] or self.faces_found[1]
 
         frame = full
         composed = None
         if backdrop_job is not None:
             try:
-                backdrop, person = backdrop_job.result()
+                backdrop, person_mask = backdrop_job.result()
             except Exception:
                 log.exception("Error en el fondo")
-                backdrop = person = None
-            if backdrop is not None and person is not None:
-                composed = mix(backdrop, full, person)
+                backdrop = person_mask = None
+            if backdrop is not None and person_mask is not None:
+                composed = mix(backdrop, full, person_mask)
         if composed is not None:
             frame = composed
         elif not owned:
             frame = frame.copy()
 
-        if landmarks is not None:
-            if beauty:
-                self._guard("belleza", self._beauty.draw, frame, landmarks, settings)
-            if mask is not None:
-                if mask.is_face and settings.face_warp:
-                    self._guard("rostro", self._face.draw, frame, mask, landmarks, settings)
-                else:
-                    self._guard("mascara", self._draw_mask, frame, mask, landmarks)
-            for accessory in extras:
-                values = settings.accessory_adjust.get(accessory.mask_id, DEFAULT_ADJUST)
-                self._guard("accesorio", self._overlay.draw, frame, accessory, landmarks, settings, tuple(values), 1.0)
+        for entry in people:
+            if entry is None:
+                continue
+            profile, landmarks, neutral = entry
+            self._apply_profile(frame, profile, landmarks, neutral)
         return frame
+
+    @staticmethod
+    def _profile_needs_face(profile: FilterProfile) -> bool:
+        return bool(profile.active_mask) or bool(profile.accessories) or BeautyRenderer.active(profile)
+
+    def _resolve_single(self, track_job, frame: np.ndarray, profile: FilterProfile):
+        if track_job is None:
+            return [None]
+        landmarks = None
+        try:
+            landmarks = track_job.result()
+        except Exception:
+            log.exception("Error en el seguimiento facial")
+        if not usable(landmarks, frame):
+            landmarks = None
+        if landmarks is not None:
+            if profile.expression and not self.neutral.ready:
+                self.neutral.observe(landmarks)
+        else:
+            landmarks = self._tracker.held()
+            if not usable(landmarks, frame):
+                landmarks = None
+            if landmarks is None:
+                self._overlay.reset()
+                self._face.reset()
+        if landmarks is None:
+            return [None]
+        return [(profile, landmarks, self.neutral)]
+
+    def _resolve_dual(self, track_job, frame: np.ndarray):
+        raw: list[np.ndarray | None] = [None, None]
+        if track_job is not None:
+            try:
+                raw = track_job.result()
+            except Exception:
+                log.exception("Error en el seguimiento facial")
+                raw = [None, None]
+        held = self._multi_tracker.held() if self._multi_tracker is not None else [None, None]
+        profiles = (self.settings.primary_profile(), self.settings.person2)
+        neutrals = (self.neutral, self.neutral2)
+        results: list[tuple[FilterProfile, np.ndarray, NeutralFace] | None] = [None, None]
+        for slot in range(2):
+            landmarks = raw[slot] if usable(raw[slot], frame) else None
+            if landmarks is not None and profiles[slot].expression and not neutrals[slot].ready:
+                neutrals[slot].observe(landmarks)
+            if landmarks is None:
+                landmarks = held[slot] if usable(held[slot], frame) else None
+            if landmarks is None:
+                continue
+            results[slot] = (profiles[slot], landmarks, neutrals[slot])
+        return results
+
+    def _apply_profile(self, frame: np.ndarray, profile: FilterProfile, landmarks: np.ndarray, neutral: NeutralFace) -> None:
+        mask = self.library.get(profile.active_mask) if profile.active_mask else None
+        extras = [a for a in (self.library.get(i) for i in profile.accessories) if a is not None]
+        if BeautyRenderer.active(profile):
+            self._guard("belleza", self._beauty.draw, frame, landmarks, profile)
+        if mask is not None:
+            if mask.is_face and profile.face_warp:
+                self._guard("rostro", self._face.draw, frame, mask, landmarks, profile)
+            else:
+                self._guard("mascara", self._draw_mask, frame, mask, landmarks, profile, neutral)
+        for accessory in extras:
+            values = profile.accessory_adjust.get(accessory.mask_id, DEFAULT_ADJUST)
+            self._guard("accesorio", self._overlay.draw, frame, accessory, landmarks, profile, tuple(values), 1.0)
 
     def _backdrop(self, small: np.ndarray, size: tuple[int, int]):
         backdrop = self._background.backdrop(small, self.settings, size)
@@ -134,11 +189,10 @@ class FramePipeline:
         person = self._background.mask(small)
         return backdrop, cv2.resize(person, size, interpolation=cv2.INTER_LINEAR)
 
-    def _draw_mask(self, frame: np.ndarray, mask, landmarks: np.ndarray) -> None:
-        settings = self.settings
-        canon = self.neutral.canonical_for(mask) if settings.expression else None
+    def _draw_mask(self, frame: np.ndarray, mask, landmarks: np.ndarray, profile: FilterProfile, neutral: NeutralFace) -> None:
+        canon = neutral.canonical_for(mask) if profile.expression else None
         expression = (self._face, canon) if canon is not None else None
-        self._overlay.draw(frame, mask, landmarks, settings, expression=expression)
+        self._overlay.draw(frame, mask, landmarks, profile, expression=expression)
 
     def _guard(self, stage: str, fn, *args) -> None:
         try:
@@ -154,4 +208,7 @@ class FramePipeline:
         if self._tracker is not None:
             self._tracker.close()
             self._tracker = None
+        if self._multi_tracker is not None:
+            self._multi_tracker.close()
+            self._multi_tracker = None
         self._background.close()

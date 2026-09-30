@@ -192,3 +192,88 @@ def test_tracker_scale_contract():
     assert tracker.process(blank, 2.0) is None
     assert tracker.held() is None
     tracker.close()
+
+
+def test_multi_face_tracker_runs_without_crashing():
+    from visagecam.processing.landmarks import MultiFaceTracker
+
+    tracker = MultiFaceTracker()
+    frame = make_frame(1280, 720)
+    for _ in range(3):
+        slots = tracker.process(frame)
+    assert slots == [None, None]
+    assert tracker.held() == [None, None]
+    tracker.forget()
+    tracker.close()
+
+
+def test_pipeline_dual_faces_applies_independent_profiles(library, monkeypatch, isolated_appdata):
+    from visagecam.processing import pipeline as pipeline_module
+
+    class TwoFaceStub:
+        def __init__(self, *a, **k) -> None:
+            self.frame = 0
+
+        def process(self, frame, scale=1.0):
+            self.frame += 1
+            return [live_face(160, 0.0, (300, 380)), live_face(150, 0.1, (980, 400))]
+
+        def held(self):
+            return [None, None]
+
+        def forget(self, slot=None) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(pipeline_module, "MultiFaceTracker", TwoFaceStub)
+    s = Settings()
+    s.dual_faces = True
+    s.active_mask = "fox"
+    s.person2.active_mask = "robot"
+    pipe = pipeline_module.FramePipeline(s, library)
+    frame = make_frame()
+    for _ in range(8):
+        out = pipe.process(frame.copy())
+    assert pipe.faces_found == (True, True)
+    left_region = out[300:560, 140:540]
+    right_region = out[300:560, 760:1180]
+    assert changed(frame[300:560, 140:540], left_region) > 0.3
+    assert changed(frame[300:560, 760:1180], right_region) > 0.3
+    s.dual_faces = False
+    pipe.process(frame.copy())
+    assert pipe.faces_found[1] is False
+    pipe.close()
+
+
+def test_pipeline_dual_faces_handles_missing_second_face(library, monkeypatch, isolated_appdata):
+    from visagecam.processing import pipeline as pipeline_module
+
+    class OneFaceStub:
+        def __init__(self, *a, **k) -> None:
+            pass
+
+        def process(self, frame, scale=1.0):
+            return [live_face(160, 0.0, (640, 380)), None]
+
+        def held(self):
+            return [None, None]
+
+        def forget(self, slot=None) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(pipeline_module, "MultiFaceTracker", OneFaceStub)
+    s = Settings()
+    s.dual_faces = True
+    s.active_mask = "fox"
+    s.person2.active_mask = "robot"
+    pipe = pipeline_module.FramePipeline(s, library)
+    for _ in range(5):
+        out = pipe.process(make_frame())
+    assert pipe.faces_found == (True, False)
+    assert out.shape == (720, 1280, 3)
+    pipe.close()

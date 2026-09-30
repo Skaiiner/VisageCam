@@ -209,6 +209,89 @@ class FaceTracker:
             self._static.close()
 
 
+class MultiFaceTracker:
+    SLOTS = 2
+
+    def __init__(self, detect_width: int = 640) -> None:
+        self._mesh = mp.solutions.face_mesh.FaceMesh(
+            static_image_mode=False,
+            max_num_faces=self.SLOTS,
+            refine_landmarks=False,
+            min_detection_confidence=0.6,
+            min_tracking_confidence=0.4,
+        )
+        self._detect_width = detect_width
+        self._filters = [LandmarkFilter() for _ in range(self.SLOTS)]
+        self._centers: list[np.ndarray | None] = [None] * self.SLOTS
+        self._last: list[np.ndarray | None] = [None] * self.SLOTS
+        self._last_time = [0.0] * self.SLOTS
+
+    def _detect(self, frame_bgr: np.ndarray, width: int) -> list[np.ndarray]:
+        height, frame_width = frame_bgr.shape[:2]
+        crop = frame_bgr
+        scale = 1.0
+        if frame_width > width:
+            scale = frame_width / width
+            crop = cv2.resize(frame_bgr, (width, int(height / scale)), interpolation=cv2.INTER_AREA)
+        rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
+        rgb.flags.writeable = False
+        result = self._mesh.process(rgb)
+        if not result.multi_face_landmarks:
+            return []
+        cw, ch = crop.shape[1], crop.shape[0]
+        return [_to_array(face.landmark, cw, ch) * scale for face in result.multi_face_landmarks]
+
+    def _assign(self, detections: list[np.ndarray]) -> list[np.ndarray | None]:
+        centers = [d.mean(axis=0) for d in detections]
+        slots: list[np.ndarray | None] = [None] * self.SLOTS
+        remaining = list(range(len(detections)))
+        order = sorted(range(self.SLOTS), key=lambda s: 0 if self._centers[s] is not None else 1)
+        for slot in order:
+            if not remaining:
+                break
+            if self._centers[slot] is None:
+                chosen = remaining.pop(0)
+            else:
+                chosen = min(remaining, key=lambda i: float(np.linalg.norm(centers[i] - self._centers[slot])))
+                remaining.remove(chosen)
+            slots[slot] = detections[chosen]
+        return slots
+
+    def process(self, frame_bgr: np.ndarray, scale: float = 1.0) -> list[np.ndarray | None]:
+        detections = self._detect(frame_bgr, self._detect_width)
+        detections = [d * np.float32(scale) for d in detections]
+        assigned = self._assign(detections)
+        now = time.perf_counter()
+        results: list[np.ndarray | None] = [None] * self.SLOTS
+        for slot, points in enumerate(assigned):
+            if points is None:
+                continue
+            self._centers[slot] = points.mean(axis=0)
+            self._last[slot] = points
+            self._last_time[slot] = now
+            results[slot] = self._filters[slot](points, now)
+        return results
+
+    def held(self) -> list[np.ndarray | None]:
+        now = time.perf_counter()
+        out: list[np.ndarray | None] = [None] * self.SLOTS
+        for slot in range(self.SLOTS):
+            if self._last[slot] is not None and now - self._last_time[slot] < HOLD_SECONDS:
+                state = self._filters[slot].state
+                out[slot] = state if state is not None else self._last[slot]
+        return out
+
+    def forget(self, slot: int | None = None) -> None:
+        indices = range(self.SLOTS) if slot is None else (slot,)
+        for i in indices:
+            self._filters[i].reset()
+            self._last[i] = None
+            self._centers[i] = None
+
+    def close(self) -> None:
+        self._mesh.close()
+
+
 def detect_static_face(image_bgr: np.ndarray) -> np.ndarray | None:
     height, width = image_bgr.shape[:2]
     rgb = cv2.cvtColor(image_bgr[:, :, :3], cv2.COLOR_BGR2RGB)

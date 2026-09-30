@@ -21,3 +21,7 @@ class Context:
     def set(self, key: str, value) -> None:
         setattr(self.settings, key, value)
         self.save()
+
+    def set_person2(self, key: str, value) -> None:
+        setattr(self.settings.person2, key, value)
+        self.save()

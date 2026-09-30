@@ -14,6 +14,82 @@ def data_dir() -> Path:
     return path
 
 
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, float(value)))
+
+
+def _load_dict_into(instance, raw: dict, skip: tuple[str, ...] = ()) -> None:
+    if not isinstance(raw, dict):
+        return
+    known = {f.name for f in fields(instance)}
+    for key, value in raw.items():
+        if key in skip or key not in known:
+            continue
+        current = getattr(instance, key)
+        try:
+            setattr(instance, key, type(current)(value))
+        except (TypeError, ValueError):
+            log.warning("Valor invalido para %s: %r", key, value)
+
+
+PROFILE_RANGES = (
+    ("mask_scale", 0.2, 3.0), ("mask_rotation", -180.0, 180.0), ("mask_offset_x", -1.0, 1.0),
+    ("mask_offset_y", -1.0, 1.0), ("mask_opacity", 0.0, 1.0), ("color_match", 0.0, 1.0),
+    ("light_match", 0.0, 1.0), ("edge_softness", 0.0, 1.0),
+    ("beauty_smooth", 0.0, 1.0), ("beauty_bright", 0.0, 1.0), ("beauty_lips", 0.0, 1.0),
+    ("beauty_teeth", 0.0, 1.0),
+)
+
+
+@dataclass
+class FilterProfile:
+    """Filtros de una persona: mascara, accesorios y belleza, independientes de la camara y del fondo."""
+
+    active_mask: str = ""
+    mask_scale: float = 1.0
+    mask_rotation: float = 0.0
+    mask_offset_x: float = 0.0
+    mask_offset_y: float = 0.0
+    mask_opacity: float = 1.0
+    color_match: float = 0.85
+    light_match: float = 0.6
+    edge_softness: float = 0.3
+    keep_eyes_mouth: bool = True
+    face_warp: bool = True
+    expression: bool = True
+
+    beauty_smooth: float = 0.0
+    beauty_bright: float = 0.0
+    beauty_lips: float = 0.0
+    beauty_teeth: float = 0.0
+
+    accessories: list = field(default_factory=list)
+    accessory_adjust: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> "FilterProfile":
+        profile = cls()
+        _load_dict_into(profile, raw if isinstance(raw, dict) else {})
+        profile.sanitize()
+        return profile
+
+    def sanitize(self) -> None:
+        for key, low, high in PROFILE_RANGES:
+            setattr(self, key, _clamp(getattr(self, key), low, high))
+        if not isinstance(self.active_mask, str):
+            self.active_mask = ""
+        self.accessories = [str(a) for a in self.accessories if isinstance(a, str)]
+        cleaned = {}
+        for key, value in self.accessory_adjust.items():
+            try:
+                values = [float(v) for v in value]
+            except (TypeError, ValueError):
+                continue
+            if len(values) == 4:
+                cleaned[str(key)] = values
+        self.accessory_adjust = cleaned
+
+
 @dataclass
 class Settings:
     camera_index: int = 0
@@ -48,6 +124,9 @@ class Settings:
     accessories: list = field(default_factory=list)
     accessory_adjust: dict = field(default_factory=dict)
 
+    dual_faces: bool = False
+    person2: FilterProfile = field(default_factory=FilterProfile)
+
     background_mode: str = "none"
     background_image: str = ""
     blur_strength: int = 40
@@ -69,32 +148,42 @@ class Settings:
             return settings
         if not isinstance(raw, dict):
             return settings
-        known = {f.name for f in fields(cls)}
-        for key, value in raw.items():
-            if key in known:
-                try:
-                    setattr(settings, key, type(getattr(settings, key))(value))
-                except (TypeError, ValueError):
-                    log.warning("Valor invalido para %s: %r", key, value)
+        _load_dict_into(settings, raw, skip=("person2",))
+        if isinstance(raw.get("person2"), dict):
+            settings.person2 = FilterProfile.from_dict(raw["person2"])
         settings.sanitize()
         return settings
 
-    def sanitize(self) -> None:
-        def clamp(value: float, low: float, high: float) -> float:
-            return max(low, min(high, float(value)))
+    def primary_profile(self) -> FilterProfile:
+        return FilterProfile(
+            active_mask=self.active_mask,
+            mask_scale=self.mask_scale,
+            mask_rotation=self.mask_rotation,
+            mask_offset_x=self.mask_offset_x,
+            mask_offset_y=self.mask_offset_y,
+            mask_opacity=self.mask_opacity,
+            color_match=self.color_match,
+            light_match=self.light_match,
+            edge_softness=self.edge_softness,
+            keep_eyes_mouth=self.keep_eyes_mouth,
+            face_warp=self.face_warp,
+            expression=self.expression,
+            beauty_smooth=self.beauty_smooth,
+            beauty_bright=self.beauty_bright,
+            beauty_lips=self.beauty_lips,
+            beauty_teeth=self.beauty_teeth,
+            accessories=list(self.accessories),
+            accessory_adjust=dict(self.accessory_adjust),
+        )
 
-        for key, low, high in (
-            ("mask_scale", 0.2, 3.0), ("mask_rotation", -180.0, 180.0), ("mask_offset_x", -1.0, 1.0),
-            ("mask_offset_y", -1.0, 1.0), ("mask_opacity", 0.0, 1.0), ("color_match", 0.0, 1.0),
-            ("light_match", 0.0, 1.0), ("edge_softness", 0.0, 1.0), ("enhance", 0.0, 1.0),
-            ("beauty_smooth", 0.0, 1.0), ("beauty_bright", 0.0, 1.0), ("beauty_lips", 0.0, 1.0),
-            ("beauty_teeth", 0.0, 1.0),
-        ):
-            setattr(self, key, clamp(getattr(self, key), low, high))
-        self.blur_strength = int(clamp(self.blur_strength, 5, 100))
-        self.fps = int(clamp(self.fps, 15, 60))
-        self.obs_port = int(clamp(self.obs_port, 1, 65535))
-        self.stream_port = int(clamp(self.stream_port, 1024, 65535))
+    def sanitize(self) -> None:
+        for key, low, high in PROFILE_RANGES:
+            setattr(self, key, _clamp(getattr(self, key), low, high))
+        self.enhance = _clamp(self.enhance, 0.0, 1.0)
+        self.blur_strength = int(_clamp(self.blur_strength, 5, 100))
+        self.fps = int(_clamp(self.fps, 15, 60))
+        self.obs_port = int(_clamp(self.obs_port, 1, 65535))
+        self.stream_port = int(_clamp(self.stream_port, 1024, 65535))
         self.camera_index = max(0, int(self.camera_index))
         if (self.width, self.height) not in ((640, 480), (960, 540), (1280, 720), (1920, 1080)):
             self.width, self.height = 1280, 720
@@ -117,6 +206,11 @@ class Settings:
             if len(values) == 4:
                 cleaned[str(key)] = values
         self.accessory_adjust = cleaned
+        if not isinstance(self.person2, FilterProfile):
+            self.person2 = FilterProfile.from_dict(self.person2 if isinstance(self.person2, dict) else {})
+        else:
+            self.person2.sanitize()
+        self.dual_faces = bool(self.dual_faces)
 
     def save(self, path: Path | None = None) -> None:
         path = path or data_dir() / "config.json"

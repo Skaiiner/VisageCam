@@ -48,6 +48,10 @@ class Engine:
     def face_found(self) -> bool:
         return self._pipeline.face_found
 
+    @property
+    def faces_found(self) -> tuple[bool, bool]:
+        return self._pipeline.faces_found
+
     def start(self) -> None:
         with self._lifecycle:
             self._start()
@@ -94,12 +98,11 @@ class Engine:
         self.stop()
         self._pipeline.close()
 
-    def recalibrate(self) -> None:
-        self._pipeline.recalibrate()
+    def recalibrate(self, person: int = 1) -> None:
+        self._pipeline.recalibrate(person)
 
-    @property
-    def calibration(self) -> tuple[bool, float]:
-        neutral = self._pipeline.neutral
+    def calibration(self, person: int = 1) -> tuple[bool, float]:
+        neutral = self._pipeline.neutral if person == 1 else self._pipeline.neutral2
         return neutral.ready, neutral.progress
 
     def start_virtual(self) -> None:

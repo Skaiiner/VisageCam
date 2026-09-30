@@ -169,3 +169,54 @@ def test_cli_flags_do_not_start_the_app(tmp_path, monkeypatch):
     assert main(["--install-shortcuts", "--desktop"]) == 0
     assert main(["--remove-shortcuts"]) == 0
     assert calls == [("install", True), ("remove",)]
+
+
+def test_filter_profile_sanitize_and_roundtrip(tmp_path):
+    from visagecam.config import FilterProfile, Settings
+
+    s = Settings()
+    s.dual_faces = "yes"
+    s.person2.mask_scale = 99
+    s.person2.accessories = ["a", 3]
+    s.person2.accessory_adjust = {"a": [1, 2, 3, 4], "bad": "x"}
+    s.sanitize()
+    assert s.dual_faces is True
+    assert s.person2.mask_scale == 3.0
+    assert s.person2.accessories == ["a"]
+    assert list(s.person2.accessory_adjust) == ["a"]
+
+    path = tmp_path / "config.json"
+    s.active_mask = "fox"
+    s.person2.active_mask = "robot"
+    s.save(path)
+    loaded = Settings.load(path)
+    assert isinstance(loaded.person2, FilterProfile)
+    assert loaded.dual_faces is True
+    assert loaded.active_mask == "fox" and loaded.person2.active_mask == "robot"
+    assert loaded.person2.accessories == ["a"]
+
+
+def test_settings_load_tolerates_corrupt_person2(tmp_path):
+    from visagecam.config import FilterProfile, Settings
+
+    path = tmp_path / "config.json"
+    path.write_text('{"person2": "not-a-dict", "dual_faces": true}', encoding="utf-8")
+    s = Settings.load(path)
+    assert isinstance(s.person2, FilterProfile) and s.dual_faces is True
+
+    path.write_text('{"person2": {"mask_scale": "bad", "accessories": "nope"}}', encoding="utf-8")
+    s = Settings.load(path)
+    assert isinstance(s.person2, FilterProfile) and 0.2 <= s.person2.mask_scale <= 3.0
+
+
+def test_primary_profile_snapshots_settings():
+    from visagecam.config import Settings
+
+    s = Settings()
+    s.active_mask = "fox"
+    s.mask_scale = 1.4
+    s.accessories = ["top_hat"]
+    profile = s.primary_profile()
+    assert profile.active_mask == "fox" and profile.mask_scale == 1.4 and profile.accessories == ["top_hat"]
+    profile.active_mask = "robot"
+    assert s.active_mask == "fox"

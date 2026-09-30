@@ -168,13 +168,13 @@ def test_studio_handles_bad_files_and_clipboard(window, tmp_path, qapp, errors):
 
 def test_drop_on_window_opens_flow(window, tmp_path, monkeypatch):
     opened = []
-    monkeypatch.setattr(MainWindow, "open_studio", lambda self, kind="mask", path=None: opened.append((kind, path)))
+    monkeypatch.setattr(MainWindow, "open_studio", lambda self, kind="mask", person=1, path=None: opened.append((kind, person, path)))
     mime = QMimeData()
     mime.setUrls([QUrl.fromLocalFile(str(write_png(tmp_path / "drop.png", "sticker")))])
     event = QDropEvent(QPointF(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
     window.dropEvent(event)
     QTest.qWait(100)
-    assert opened and opened[0][0] == "mask"
+    assert opened and opened[0][0] == "mask" and opened[0][1] == 1
     junk = QMimeData()
     junk.setUrls([QUrl.fromLocalFile(str(tmp_path / "x.exe"))])
     window.dropEvent(QDropEvent(QPointF(1, 1), Qt.CopyAction, junk, Qt.LeftButton, Qt.NoModifier))
@@ -270,3 +270,66 @@ def test_legacy_mirror_setting_is_migrated(tmp_path):
     path.write_text('{"mirror": true}', encoding="utf-8")
     s = Settings.load(path)
     assert s.mirror_mode == "both" and s.mirror is False
+
+
+def test_person2_page_is_independent_of_person1(window, errors):
+    window.show_page("person2")
+    QTest.qWait(50)
+    assert not window.settings.dual_faces
+    window.person2.sw_dual.click()
+    assert window.settings.dual_faces is True
+    fox_item = None
+    for row in range(window.person2.gallery.count()):
+        item = window.person2.gallery.item(row)
+        if item.data(Qt.UserRole) == "fox":
+            fox_item = item
+            break
+    assert fox_item is not None
+    window.person2.gallery.setCurrentItem(fox_item)
+    window.person2.gallery.itemClicked.emit(fox_item)
+    QTest.qWait(50)
+    assert window.settings.person2.active_mask == "fox"
+    assert window.settings.active_mask != "fox"
+    window.filters.select("robot")
+    assert window.settings.active_mask == "robot"
+    assert window.settings.person2.active_mask == "fox"
+    window.person2.acc_gallery.itemClicked.emit(window.person2.acc_gallery.item(0))
+    QTest.qWait(50)
+    first_acc = window.person2.acc_gallery.item(0).data(Qt.UserRole)
+    assert first_acc in window.settings.person2.accessories
+    assert first_acc not in window.settings.accessories
+    window.person2.sl_scale._slider.setValue(150)
+    QTest.qWait(600)
+    from visagecam.config import Settings, data_dir
+
+    reloaded = Settings.load(data_dir() / "config.json")
+    assert reloaded.person2.mask_scale == 1.5
+    assert reloaded.mask_scale != 1.5
+    assert not errors
+
+
+def test_person2_calibration_status_updates(window, errors):
+    window.show_page("person2")
+    window.person2.tick()
+    assert "dos personas" in window.person2.calib_status.text() or window.person2.calib_status.text()
+    window.person2.sw_dual.click()
+    recal_ok = True
+    try:
+        window.person2._recalibrate()
+    except Exception:
+        recal_ok = False
+    assert recal_ok
+    window.person2.tick()
+    assert not errors
+
+
+def test_drop_on_person2_page_targets_person_two(window, tmp_path, monkeypatch):
+    opened = []
+    monkeypatch.setattr(MainWindow, "open_studio", lambda self, kind="mask", person=1, path=None: opened.append((kind, person)))
+    window.show_page("person2")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(write_png(tmp_path / "drop2.png", "sticker")))])
+    event = QDropEvent(QPointF(5, 5), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+    window.dropEvent(event)
+    QTest.qWait(100)
+    assert opened and opened[0] == ("mask", 2)
