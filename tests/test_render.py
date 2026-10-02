@@ -277,3 +277,76 @@ def test_pipeline_dual_faces_handles_missing_second_face(library, monkeypatch, i
     assert pipe.faces_found == (True, False)
     assert out.shape == (720, 1280, 3)
     pipe.close()
+
+
+def test_distortion_presets_change_pixels_and_respect_radius(library):
+    from visagecam.config import FilterProfile
+    from visagecam.processing.distortion import PRESETS, DistortionRenderer
+
+    renderer = DistortionRenderer()
+    face = live_face()
+    for preset_id in PRESETS:
+        frame = make_frame()
+        before = frame.copy()
+        renderer.draw(frame, face, FilterProfile(distortion=preset_id, distortion_strength=1.0))
+        assert not np.array_equal(before, frame), preset_id
+        far_corner = frame[:40, :40]
+        assert np.array_equal(before[:40, :40], far_corner), preset_id
+
+
+def test_distortion_strength_scales_effect(library):
+    from visagecam.config import FilterProfile
+    from visagecam.processing.distortion import DistortionRenderer
+
+    renderer = DistortionRenderer()
+    face = live_face()
+    weak = make_frame()
+    strong = make_frame()
+    renderer.draw(weak, face, FilterProfile(distortion="big_eyes", distortion_strength=0.3))
+    renderer.draw(strong, face, FilterProfile(distortion="big_eyes", distortion_strength=2.0))
+    base = make_frame()
+    assert changed(base, strong) > changed(base, weak)
+
+
+def test_distortion_unknown_or_empty_is_noop(library):
+    from visagecam.config import FilterProfile
+    from visagecam.processing.distortion import DistortionRenderer
+
+    renderer = DistortionRenderer()
+    face = live_face()
+    for preset_id in ("", "does-not-exist"):
+        frame = make_frame()
+        before = frame.copy()
+        renderer.draw(frame, face, FilterProfile(distortion=preset_id))
+        assert np.array_equal(before, frame)
+
+
+def test_distortion_combines_with_mask(library, neutral):
+    mask = library.get("fox")
+    face = live_face()
+    s = Settings()
+    s.active_mask = "fox"
+    s.distortion = "big_eyes"
+    pipeline_profile = s.primary_profile()
+    from visagecam.processing.distortion import DistortionRenderer
+
+    frame = make_frame()
+    DistortionRenderer().draw(frame, face, pipeline_profile)
+    before_mask = frame.copy()
+    OverlayRenderer().draw(frame, mask, face, pipeline_profile, expression=(FaceWarpRenderer(), neutral.canonical_for(mask)))
+    assert changed(before_mask, frame) > 0.3
+
+
+def test_pipeline_applies_distortion_alone_and_with_mask(library, monkeypatch, isolated_appdata):
+    from visagecam.processing import pipeline as pipeline_module
+
+    monkeypatch.setattr(pipeline_module, "FaceTracker", StubTracker)
+    s = Settings()
+    s.distortion = "big_eyes"
+    pipe = pipeline_module.FramePipeline(s, library)
+    frame = make_frame()
+    for _ in range(10):
+        out = pipe.process(frame.copy())
+    assert pipe.face_found
+    assert changed(frame, out) > 0.01
+    pipe.close()

@@ -333,3 +333,66 @@ def test_drop_on_person2_page_targets_person_two(window, tmp_path, monkeypatch):
     window.dropEvent(event)
     QTest.qWait(100)
     assert opened and opened[0] == ("mask", 2)
+
+
+def test_distortion_page_is_independent_of_filters(window, errors):
+    window.show_page("distortion")
+    QTest.qWait(50)
+    assert window.settings.distortion == ""
+    big_eyes_item = None
+    for row in range(window.distortion.gallery.count()):
+        item = window.distortion.gallery.item(row)
+        if item.data(Qt.UserRole) == "big_eyes":
+            big_eyes_item = item
+            break
+    assert big_eyes_item is not None
+    window.distortion.gallery.setCurrentItem(big_eyes_item)
+    window.distortion.gallery.itemClicked.emit(big_eyes_item)
+    QTest.qWait(50)
+    assert window.settings.distortion == "big_eyes"
+    assert window.settings.active_mask == ""
+    window.filters.select("fox")
+    assert window.settings.active_mask == "fox"
+    assert window.settings.distortion == "big_eyes"
+    window.distortion.sl_strength._slider.setValue(150)
+    QTest.qWait(600)
+    from visagecam.config import Settings, data_dir
+
+    reloaded = Settings.load(data_dir() / "config.json")
+    assert reloaded.distortion == "big_eyes"
+    assert reloaded.distortion_strength == 1.5
+    assert not errors
+
+
+def test_distortion_none_clears_setting(window, errors):
+    window.show_page("distortion")
+    window.distortion.gallery.setCurrentItem(window.distortion.gallery.item(1))
+    QTest.qWait(30)
+    assert window.settings.distortion != ""
+    window.distortion.gallery.setCurrentItem(window.distortion.gallery.item(0))
+    QTest.qWait(30)
+    assert window.settings.distortion == ""
+    assert not errors
+
+
+def test_person2_distortion_is_independent_of_person1(window, errors):
+    window.show_page("person2")
+    QTest.qWait(50)
+    item = None
+    for row in range(window.person2.dist_gallery.count()):
+        candidate = window.person2.dist_gallery.item(row)
+        if candidate.data(Qt.UserRole) == "tiny_face":
+            item = candidate
+            break
+    assert item is not None
+    window.person2.dist_gallery.setCurrentItem(item)
+    window.person2.dist_gallery.itemClicked.emit(item)
+    QTest.qWait(50)
+    assert window.settings.person2.distortion == "tiny_face"
+    assert window.settings.distortion == ""
+    window.show_page("distortion")
+    window.distortion.gallery.setCurrentItem(window.distortion.gallery.item(1))
+    QTest.qWait(50)
+    assert window.settings.distortion != ""
+    assert window.settings.person2.distortion == "tiny_face"
+    assert not errors

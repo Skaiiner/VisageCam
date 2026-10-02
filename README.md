@@ -5,6 +5,7 @@ Camara virtual para Windows 10 y 11 escrita en Python. Captura tu webcam, detect
 ## Caracteristicas
 
 - **Dos personas a la vez**: activa el modo dos personas para detectar hasta dos caras y ponerle a cada una su propio filtro, accesorios y belleza, de forma independiente, desde el menu **Persona 2**.
+- **Deformaciones**: agranda o encoge partes de tu cara en directo (ojos, boca, nariz, menton, cara delgada, cabeza grande...) sin superponer ninguna imagen. Es una pestana aparte de las mascaras y se puede combinar con ellas.
 - **Filtros de cara**: 14 mascaras incluidas (animales, ciencia ficcion y antifaces de mascarada que dejan la boca libre) que siguen tus gestos (boca, mejillas, cejas), y cualquier imagen propia: si tiene cara se deforma sobre la tuya con ajuste de color.
 - **Accesorios**: 10 accesorios incluidos (sombreros, corona, gorro, corona de flores, gafas, monoculo, bigote, panuelo, auriculares) y los tuyos, combinables y con ajuste individual.
 - **Belleza**: piel suave, luminosidad, labios y dientes.

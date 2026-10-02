@@ -220,3 +220,51 @@ def test_primary_profile_snapshots_settings():
     assert profile.active_mask == "fox" and profile.mask_scale == 1.4 and profile.accessories == ["top_hat"]
     profile.active_mask = "robot"
     assert s.active_mask == "fox"
+
+
+def test_filter_profile_distortion_fields_roundtrip(tmp_path):
+    from visagecam.config import FilterProfile, Settings
+
+    s = Settings()
+    s.distortion = "big_eyes"
+    s.distortion_strength = 50
+    s.person2.distortion = "does-not-matter-here"
+    s.person2.distortion_strength = -9
+    s.sanitize()
+    assert s.distortion_strength == 2.0
+    assert s.person2.distortion_strength == 0.3
+
+    path = tmp_path / "config.json"
+    s.save(path)
+    loaded = Settings.load(path)
+    assert loaded.distortion == "big_eyes"
+    assert loaded.distortion_strength == 2.0
+    assert isinstance(loaded.person2, FilterProfile)
+    assert loaded.person2.distortion_strength == 0.3
+
+
+def test_settings_load_tolerates_bad_distortion_type(tmp_path):
+    from visagecam.config import Settings
+
+    path = tmp_path / "config.json"
+    path.write_text('{"distortion": 42, "distortion_strength": "nope"}', encoding="utf-8")
+    s = Settings.load(path)
+    assert isinstance(s.distortion, str)
+    assert 0.3 <= s.distortion_strength <= 2.0
+
+    from visagecam.processing.distortion import DistortionRenderer
+
+    frame = np.full((200, 200, 3), 100, np.uint8)
+    before = frame.copy()
+    DistortionRenderer().draw(frame, np.zeros((468, 2), np.float32), s.primary_profile())
+    assert np.array_equal(before, frame)
+
+
+def test_primary_profile_includes_distortion():
+    from visagecam.config import Settings
+
+    s = Settings()
+    s.distortion = "slim_face"
+    s.distortion_strength = 1.4
+    profile = s.primary_profile()
+    assert profile.distortion == "slim_face" and profile.distortion_strength == 1.4

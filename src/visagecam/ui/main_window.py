@@ -30,6 +30,7 @@ from visagecam.ui.pages import (
     BackgroundPage,
     BeautyPage,
     CameraPage,
+    DistortionPage,
     FiltersPage,
     ObsPage,
     Person2Page,
@@ -43,6 +44,7 @@ log = logging.getLogger(__name__)
 RETRY_SECONDS = 3.0
 NAV_ICONS = {
     "filters": "mask",
+    "distortion": "sliders",
     "accessories": "hat",
     "beauty": "sparkle",
     "person2": "face",
@@ -124,6 +126,7 @@ class MainWindow(QMainWindow):
         self.nav_buttons: dict[str, QToolButton] = {}
         for key, label in (
             ("filters", "Filtros"),
+            ("distortion", "Deformar"),
             ("accessories", "Accesorios"),
             ("beauty", "Belleza"),
             ("person2", "Persona 2"),
@@ -185,6 +188,7 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.stack.setFixedWidth(430)
         self.filters = FiltersPage(self.ctx, lambda kind: self.open_studio(kind, 1))
+        self.distortion = DistortionPage(self.ctx)
         self.accessories = AccessoriesPage(self.ctx, lambda kind: self.open_studio(kind, 1))
         self.beauty = BeautyPage(self.ctx)
         self.person2 = Person2Page(self.ctx, self.open_studio)
@@ -194,6 +198,7 @@ class MainWindow(QMainWindow):
         self.camera.on_mirror = self._mirror_synced
         self.pages = {
             "filters": self.filters,
+            "distortion": self.distortion,
             "accessories": self.accessories,
             "beauty": self.beauty,
             "person2": self.person2,

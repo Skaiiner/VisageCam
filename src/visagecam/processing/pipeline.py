@@ -10,6 +10,7 @@ from visagecam.masks.library import MaskLibrary
 from visagecam.processing.background import BackgroundRenderer
 from visagecam.processing.beauty import BeautyRenderer
 from visagecam.processing.blend import mix
+from visagecam.processing.distortion import DistortionRenderer
 from visagecam.processing.enhance import Denoiser, Enhancer
 from visagecam.processing.face_warp import FaceWarpRenderer
 from visagecam.processing.landmarks import FaceTracker, MultiFaceTracker, face_width
@@ -38,6 +39,7 @@ class FramePipeline:
         self._overlay = OverlayRenderer()
         self._face = FaceWarpRenderer()
         self._beauty = BeautyRenderer()
+        self._distortion = DistortionRenderer()
         self._enhancer = Enhancer()
         self._denoiser = Denoiser()
         self._pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="visagecam")
@@ -119,7 +121,12 @@ class FramePipeline:
 
     @staticmethod
     def _profile_needs_face(profile: FilterProfile) -> bool:
-        return bool(profile.active_mask) or bool(profile.accessories) or BeautyRenderer.active(profile)
+        return (
+            bool(profile.active_mask)
+            or bool(profile.accessories)
+            or bool(profile.distortion)
+            or BeautyRenderer.active(profile)
+        )
 
     def _resolve_single(self, track_job, frame: np.ndarray, profile: FilterProfile):
         if track_job is None:
@@ -173,6 +180,8 @@ class FramePipeline:
         extras = [a for a in (self.library.get(i) for i in profile.accessories) if a is not None]
         if BeautyRenderer.active(profile):
             self._guard("belleza", self._beauty.draw, frame, landmarks, profile)
+        if profile.distortion:
+            self._guard("deformacion", self._distortion.draw, frame, landmarks, profile)
         if mask is not None:
             if mask.is_face and profile.face_warp:
                 self._guard("rostro", self._face.draw, frame, mask, landmarks, profile)

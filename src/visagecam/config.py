@@ -37,7 +37,7 @@ PROFILE_RANGES = (
     ("mask_offset_y", -1.0, 1.0), ("mask_opacity", 0.0, 1.0), ("color_match", 0.0, 1.0),
     ("light_match", 0.0, 1.0), ("edge_softness", 0.0, 1.0),
     ("beauty_smooth", 0.0, 1.0), ("beauty_bright", 0.0, 1.0), ("beauty_lips", 0.0, 1.0),
-    ("beauty_teeth", 0.0, 1.0),
+    ("beauty_teeth", 0.0, 1.0), ("distortion_strength", 0.3, 2.0),
 )
 
 
@@ -57,6 +57,9 @@ class FilterProfile:
     keep_eyes_mouth: bool = True
     face_warp: bool = True
     expression: bool = True
+
+    distortion: str = ""
+    distortion_strength: float = 1.0
 
     beauty_smooth: float = 0.0
     beauty_bright: float = 0.0
@@ -78,6 +81,8 @@ class FilterProfile:
             setattr(self, key, _clamp(getattr(self, key), low, high))
         if not isinstance(self.active_mask, str):
             self.active_mask = ""
+        if not isinstance(self.distortion, str):
+            self.distortion = ""
         self.accessories = [str(a) for a in self.accessories if isinstance(a, str)]
         cleaned = {}
         for key, value in self.accessory_adjust.items():
@@ -115,6 +120,9 @@ class Settings:
     edge_softness: float = 0.3
     keep_eyes_mouth: bool = True
     face_warp: bool = True
+
+    distortion: str = ""
+    distortion_strength: float = 1.0
 
     beauty_smooth: float = 0.0
     beauty_bright: float = 0.0
@@ -168,6 +176,8 @@ class Settings:
             keep_eyes_mouth=self.keep_eyes_mouth,
             face_warp=self.face_warp,
             expression=self.expression,
+            distortion=self.distortion,
+            distortion_strength=self.distortion_strength,
             beauty_smooth=self.beauty_smooth,
             beauty_bright=self.beauty_bright,
             beauty_lips=self.beauty_lips,
@@ -196,6 +206,8 @@ class Settings:
             self.background_mode = "none"
         if self.virtual_backend not in ("auto", "unitycapture", "obs"):
             self.virtual_backend = "auto"
+        if not isinstance(self.distortion, str):
+            self.distortion = ""
         self.accessories = [str(a) for a in self.accessories if isinstance(a, str)]
         cleaned = {}
         for key, value in self.accessory_adjust.items():

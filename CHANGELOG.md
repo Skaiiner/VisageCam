@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.5.0
+
+- Deformaciones de cara en directo (ojos grandes/pequenos, boca grande, nariz pequena, menton grande, cara delgada, cabeza grande, cara mini, espejo loco), en una pestana **Deformar** separada de las mascaras, combinable con ellas. Disponible tambien para la Persona 2.
+
 ## 1.4.0
 
 - Modo dos personas: deteccion de hasta dos caras a la vez, cada una con su propio filtro, accesorios y belleza, configurables desde el nuevo menu **Persona 2**.

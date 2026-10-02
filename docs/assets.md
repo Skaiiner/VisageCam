@@ -1,5 +1,9 @@
 # Mascaras, accesorios e imagenes propias
 
+## Deformaciones de cara
+
+Pestana **Deformar**, independiente de las mascaras: deforma tu rostro en directo en vez de superponer una imagen. Incluye ojos grandes, ojos pequenos, frente grande, boca grande, nariz pequena, menton grande, cara delgada, cabeza grande, cara mini y espejo loco (combinacion asimetrica). Tiene un control de intensidad y se puede combinar con una mascara o accesorio, porque actua sobre los pixeles de tu cara antes de dibujarlos encima.
+
 ## Catalogo incluido
 
 **Mascaras de cara completa**: zorro, robot retro, dragon, gato astronauta, alienigena, oso vintage, caballero cromado, fenix, lobo tribal.
