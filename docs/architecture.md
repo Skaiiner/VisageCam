@@ -14,8 +14,9 @@ Webcam ──► capture ──► engine ──► processing.pipeline ──�
    - hilo principal: reduccion de ruido temporal y mejora de imagen a resolucion completa;
    - seguimiento facial (MediaPipe Face Mesh) sobre una copia de 640 px;
    - segmentacion de fondo (MediaPipe) y fondo desenfocado o imagen.
-4. Con los puntos faciales se dibujan, en este orden: belleza, mascara y accesorios.
-5. Un hilo de salida separado envia el resultado a la camara virtual y al flujo MJPEG para no bloquear el procesado.
+4. Con los puntos faciales se dibujan, en este orden: belleza, deformacion de cara, mascara y accesorios.
+5. Al final se aplican, sobre el fotograma completo: los ajustes de color (brillo, contraste, saturacion, temperatura) y el efecto de camara elegido.
+6. Un hilo de salida separado envia el resultado a la camara virtual y al flujo MJPEG para no bloquear el procesado.
 
 ## Paquetes (`src/visagecam`)
 

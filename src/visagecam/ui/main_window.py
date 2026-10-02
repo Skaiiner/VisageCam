@@ -31,6 +31,7 @@ from visagecam.ui.pages import (
     AccessoriesPage,
     BackgroundPage,
     BeautyPage,
+    CameraFxPage,
     CameraPage,
     DistortionPage,
     FiltersPage,
@@ -47,6 +48,7 @@ RETRY_SECONDS = 3.0
 NAV_ICONS = {
     "filters": "mask",
     "distortion": "sliders",
+    "camera_fx": "wand",
     "accessories": "hat",
     "beauty": "sparkle",
     "person2": "face",
@@ -129,6 +131,7 @@ class MainWindow(QMainWindow):
         for key, label in (
             ("filters", "Filtros"),
             ("distortion", "Deformar"),
+            ("camera_fx", "Efectos"),
             ("accessories", "Accesorios"),
             ("beauty", "Belleza"),
             ("person2", "Persona 2"),
@@ -201,6 +204,7 @@ class MainWindow(QMainWindow):
         self.stack.setFixedWidth(430)
         self.filters = FiltersPage(self.ctx, lambda kind: self.open_studio(kind, 1))
         self.distortion = DistortionPage(self.ctx)
+        self.camera_fx = CameraFxPage(self.ctx)
         self.accessories = AccessoriesPage(self.ctx, lambda kind: self.open_studio(kind, 1))
         self.beauty = BeautyPage(self.ctx)
         self.person2 = Person2Page(self.ctx, self.open_studio)
@@ -211,6 +215,7 @@ class MainWindow(QMainWindow):
         self.pages = {
             "filters": self.filters,
             "distortion": self.distortion,
+            "camera_fx": self.camera_fx,
             "accessories": self.accessories,
             "beauty": self.beauty,
             "person2": self.person2,

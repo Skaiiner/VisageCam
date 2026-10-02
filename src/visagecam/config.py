@@ -140,6 +140,13 @@ class Settings:
     accessories: list = field(default_factory=list)
     accessory_adjust: dict = field(default_factory=dict)
 
+    camera_effect: str = ""
+    camera_effect_strength: float = 1.0
+    grade_brightness: float = 0.0
+    grade_contrast: float = 0.0
+    grade_saturation: float = 0.0
+    grade_temperature: float = 0.0
+
     dual_faces: bool = False
     person2: FilterProfile = field(default_factory=FilterProfile)
 
@@ -216,6 +223,11 @@ class Settings:
             self.virtual_backend = "auto"
         if not isinstance(self.distortion, str):
             self.distortion = ""
+        if not isinstance(self.camera_effect, str):
+            self.camera_effect = ""
+        self.camera_effect_strength = _clamp(self.camera_effect_strength, 0.3, 2.0)
+        for key in ("grade_brightness", "grade_contrast", "grade_saturation", "grade_temperature"):
+            setattr(self, key, _clamp(getattr(self, key), -1.0, 1.0))
         self.accessories = [str(a) for a in self.accessories if isinstance(a, str)]
         cleaned = {}
         for key, value in self.accessory_adjust.items():

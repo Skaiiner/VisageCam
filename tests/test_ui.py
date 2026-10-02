@@ -414,3 +414,66 @@ def test_person2_distortion_is_independent_of_person1(window, errors):
     assert window.settings.distortion != ""
     assert window.settings.person2.distortion == "tiny_face"
     assert not errors
+
+
+def test_camera_fx_page_applies_effect_and_grade(window, errors):
+    window.show_page("camera_fx")
+    QTest.qWait(50)
+    assert window.settings.camera_effect == ""
+    target = None
+    for row in range(window.camera_fx.gallery.count()):
+        item = window.camera_fx.gallery.item(row)
+        if item.data(Qt.UserRole) == "sepia":
+            target = item
+            break
+    assert target is not None
+    window.camera_fx.gallery.setCurrentItem(target)
+    QTest.qWait(50)
+    assert window.settings.camera_effect == "sepia"
+    window.camera_fx.sl_strength._slider.setValue(160)
+    window.camera_fx.grade_sliders["grade_contrast"]._slider.setValue(40)
+    QTest.qWait(600)
+    from visagecam.config import Settings, data_dir
+
+    reloaded = Settings.load(data_dir() / "config.json")
+    assert reloaded.camera_effect == "sepia"
+    assert reloaded.camera_effect_strength == 1.6
+    assert reloaded.grade_contrast == 0.4
+    window.camera_fx._reset_grade()
+    assert window.settings.grade_contrast == 0.0
+    window.camera_fx._clear()
+    assert window.settings.camera_effect == ""
+    assert not errors
+
+
+def test_camera_fx_categories_filter_the_gallery(window, errors):
+    window.show_page("camera_fx")
+    from visagecam.processing.camera_effects import effects_in
+
+    for category in ("warp", "style", "all"):
+        window.camera_fx.categories.changed.emit(category)
+        QTest.qWait(40)
+        shown = {
+            window.camera_fx.gallery.item(row).data(Qt.UserRole)
+            for row in range(window.camera_fx.gallery.count())
+        }
+        assert shown == set(effects_in(category)) | {""}, category
+    assert not errors
+
+
+def test_distortion_categories_filter_the_gallery(window, errors):
+    window.show_page("distortion")
+    from visagecam.processing.distortion import presets_in
+
+    for category in ("eyes", "mouth", "face", "fun", "all"):
+        window.distortion.categories.changed.emit(category)
+        QTest.qWait(40)
+        shown = {
+            window.distortion.gallery.item(row).data(Qt.UserRole)
+            for row in range(window.distortion.gallery.count())
+        }
+        assert shown == set(presets_in(category)) | {""}, category
+    window.distortion.categories.changed.emit("all")
+    window.distortion._clear()
+    assert window.settings.distortion == ""
+    assert not errors

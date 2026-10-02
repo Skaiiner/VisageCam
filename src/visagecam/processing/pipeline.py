@@ -12,6 +12,7 @@ from visagecam.masks.library import MaskLibrary
 from visagecam.processing.background import BackgroundRenderer
 from visagecam.processing.beauty import BeautyRenderer
 from visagecam.processing.blend import mix
+from visagecam.processing.camera_effects import CameraEffectRenderer, CameraGrader
 from visagecam.processing.distortion import DistortionRenderer
 from visagecam.processing.enhance import Denoiser, Enhancer
 from visagecam.processing.face_warp import FaceWarpRenderer
@@ -42,6 +43,8 @@ class FramePipeline:
         self._face = FaceWarpRenderer()
         self._beauty = BeautyRenderer()
         self._distortion = DistortionRenderer()
+        self._camera_fx = CameraEffectRenderer()
+        self._grader = CameraGrader()
         self._enhancer = Enhancer()
         self._denoiser = Denoiser()
         self._pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="visagecam")
@@ -121,7 +124,33 @@ class FramePipeline:
                 continue
             profile, landmarks, neutral = entry
             self._apply_profile(frame, profile, landmarks, neutral)
+        return self._finish(frame)
+
+    def _finish(self, frame: np.ndarray) -> np.ndarray:
+        settings = self.settings
+        if CameraGrader.active(settings):
+            try:
+                frame = self._grader.apply(
+                    frame,
+                    settings.grade_brightness,
+                    settings.grade_contrast,
+                    settings.grade_saturation,
+                    settings.grade_temperature,
+                )
+            except Exception:
+                self._note_error("color")
+        if settings.camera_effect:
+            try:
+                frame = self._camera_fx.apply(frame, settings.camera_effect, settings.camera_effect_strength)
+            except Exception:
+                self._note_error("efecto de camara")
         return frame
+
+    def _note_error(self, stage: str) -> None:
+        now = time.monotonic()
+        if now - self._last_error > 2.0:
+            self._last_error = now
+            log.exception("Error en la etapa %s", stage)
 
     @staticmethod
     def _profile_needs_face(profile: FilterProfile) -> bool:

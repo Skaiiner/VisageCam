@@ -68,6 +68,17 @@ def _path_for(name: str) -> tuple[QPainterPath, bool]:
             p.moveTo(4, y)
             p.lineTo(20, y)
             p.addEllipse(QPointF(x, y), 2.2, 2.2)
+    elif name == "wand":
+        p.moveTo(4, 20)
+        p.lineTo(15, 9)
+        p.moveTo(13, 7)
+        p.lineTo(17, 11)
+        p.moveTo(18, 3)
+        p.lineTo(18, 7)
+        p.moveTo(16, 5)
+        p.lineTo(20, 5)
+        p.addEllipse(QPointF(21, 13), 1.2, 1.2)
+        p.addEllipse(QPointF(9, 4), 1.2, 1.2)
     elif name == "plus":
         p.moveTo(12, 5)
         p.lineTo(12, 19)

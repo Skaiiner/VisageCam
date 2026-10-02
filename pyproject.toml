@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "visagecam"
-version = "1.5.2"
+version = "1.6.0"
 description = "Camara virtual para Windows con mascaras faciales, accesorios, filtros de belleza y fondos"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"

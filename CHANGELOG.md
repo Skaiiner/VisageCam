@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.6.0
+
+- 17 deformaciones de cara nuevas (hasta 27 en total), en 4 categorias con filtro por pestana: ojos saltones, ojos separados/juntos, ojos hipnoticos (remolino), sonrisa enorme, boca torcida, nariz grande, menton largo, mejillas grandes, cara alargada/ancha/apretada, cabeza alien, remolino, cara derretida y chibi. Nuevos tipos de deformacion ademas de agrandar/encoger: estirar en una direccion, remolino y desplazar.
+- Pestana nueva **Efectos de camara**: 28 efectos sobre el video completo (10 que deforman la imagen: ojo de pez, pellizco, remolino, olas, espejos, caleidoscopio, zoom, cuatro camaras; 18 de color y estilo: blanco y negro, sepia, negativo, cartel, neon, dibujo animado, boceto, pixelado, termico, VHS, vintage, resplandor, frio, calido, vision nocturna, glitch, relieve, alto contraste), con control de intensidad.
+- Ajustes de imagen (brillo, contraste, saturacion, temperatura) independientes de los efectos.
+
 ## 1.5.2
 
 - Publicacion automatica: hook de git que sube cada commit a GitHub (`scripts/hooks/post-commit`, `scripts/install_hooks.bat`).

@@ -4,6 +4,12 @@
 
 Pestana **Deformar**, independiente de las mascaras: deforma tu rostro en directo en vez de superponer una imagen. Incluye ojos grandes, ojos pequenos, frente grande, boca grande, nariz pequena, menton grande, cara delgada, cabeza grande, cara mini y espejo loco (combinacion asimetrica). Tiene un control de intensidad y se puede combinar con una mascara o accesorio, porque actua sobre los pixeles de tu cara antes de dibujarlos encima.
 
+## Efectos de camara y ajustes de imagen
+
+Pestana **Efectos**, independiente de las mascaras y las deformaciones de cara: aplica un efecto a todo el video (tu cara, el fondo, mascaras y accesorios), al final del procesado. Se divide en dos categorias: deformar la imagen (ojo de pez, pellizco, remolino, olas, espejos, caleidoscopio, zoom, cuatro camaras) y color y estilo (blanco y negro, sepia, negativo, cartel, neon, dibujo animado, boceto, pixelado, termico, VHS, vintage, resplandor, frio, calido, vision nocturna, glitch, relieve, alto contraste). Tiene su propio control de intensidad.
+
+Debajo, los ajustes de brillo, contraste, saturacion y temperatura corrigen el color de la camara de forma independiente, se usen o no los efectos.
+
 ## Catalogo incluido
 
 **Mascaras de cara completa**: zorro, robot retro, dragon, gato astronauta, alienigena, oso vintage, caballero cromado, fenix, lobo tribal.

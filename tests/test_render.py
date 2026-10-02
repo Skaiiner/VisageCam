@@ -378,3 +378,113 @@ def test_pipeline_applies_distortion_alone_and_with_mask(library, monkeypatch, i
     assert pipe.face_found
     assert changed(frame, out) > 0.01
     pipe.close()
+
+
+def test_all_distortion_presets_render_every_kind(library):
+    from visagecam.config import FilterProfile
+    from visagecam.processing.distortion import PRESETS, DistortionRenderer
+
+    renderer = DistortionRenderer()
+    face = live_face()
+    kinds = {point.kind for preset in PRESETS.values() for point in preset.points}
+    assert kinds == {"bulge", "stretch", "swirl", "shift"}
+    assert len(PRESETS) >= 25
+    for preset_id in PRESETS:
+        frame = make_frame()
+        before = frame.copy()
+        renderer.draw(frame, face, FilterProfile(distortion=preset_id, distortion_strength=1.0))
+        assert not np.array_equal(before, frame), preset_id
+        assert np.array_equal(before[:30, :30], frame[:30, :30]), preset_id
+        assert frame.dtype == np.uint8 and frame.shape == before.shape
+
+
+def test_distortion_categories_cover_every_preset():
+    from visagecam.processing.distortion import CATEGORIES, PRESETS, presets_in
+
+    assert set(presets_in("all")) == set(PRESETS)
+    named = {key for key, _ in CATEGORIES if key != "all"}
+    assert {preset.category for preset in PRESETS.values()} <= named
+    covered = {pid for key in named for pid in presets_in(key)}
+    assert covered == set(PRESETS)
+
+
+def test_camera_effects_all_run_and_keep_shape():
+    from visagecam.processing.camera_effects import EFFECTS, CameraEffectRenderer
+
+    renderer = CameraEffectRenderer()
+    base = make_frame(640, 360)
+    base[40:120, 60:200] = (20, 200, 240)
+    base[260:330, 430:600] = (240, 40, 90)
+    assert len(EFFECTS) >= 25
+    for effect_id in EFFECTS:
+        out = renderer.apply(base.copy(), effect_id, 1.0)
+        assert out.shape == base.shape and out.dtype == np.uint8, effect_id
+        assert not np.array_equal(out, base), effect_id
+
+
+def test_camera_effect_unknown_is_noop_and_cache_is_bounded():
+    from visagecam.processing.camera_effects import MAX_CACHED_MAPS, CameraEffectRenderer
+
+    renderer = CameraEffectRenderer()
+    base = make_frame(320, 180)
+    assert np.array_equal(renderer.apply(base.copy(), "", 1.0), base)
+    assert np.array_equal(renderer.apply(base.copy(), "no-existe", 1.0), base)
+    for strength in np.linspace(0.3, 2.0, 20):
+        renderer.apply(base.copy(), "fisheye", float(strength))
+    assert len(renderer._maps) <= MAX_CACHED_MAPS
+
+
+def test_camera_grader_changes_image_and_detects_activity():
+    from visagecam.config import Settings
+    from visagecam.processing.camera_effects import CameraGrader
+
+    settings = Settings()
+    assert CameraGrader.active(settings) is False
+    settings.grade_contrast = 0.5
+    assert CameraGrader.active(settings) is True
+    base = make_frame()
+    grader = CameraGrader()
+    brighter = grader.apply(base.copy(), 0.5, 0.0, 0.0, 0.0)
+    assert brighter.mean() > base.mean()
+    warm = grader.apply(base.copy(), 0.0, 0.0, 0.0, 0.6)
+    cool = grader.apply(base.copy(), 0.0, 0.0, 0.0, -0.6)
+    assert warm[..., 2].mean() > cool[..., 2].mean()
+    assert warm[..., 0].mean() < cool[..., 0].mean()
+    gray = grader.apply(base.copy(), 0.0, 0.0, -1.0, 0.0)
+    assert abs(float(gray[..., 0].mean()) - float(gray[..., 2].mean())) < 6.0
+
+
+def test_pipeline_applies_camera_effect_and_grade(library, monkeypatch, isolated_appdata):
+    from visagecam.processing import pipeline as pipeline_module
+
+    monkeypatch.setattr(pipeline_module, "FaceTracker", StubTracker)
+    s = Settings()
+    s.camera_effect = "sepia"
+    s.grade_contrast = 0.4
+    pipe = pipeline_module.FramePipeline(s, library)
+    base = make_frame()
+    out = pipe.process(base.copy())
+    assert out.shape == base.shape
+    assert changed(base, out) > 1.0
+    s.camera_effect = ""
+    s.grade_contrast = 0.0
+    s.grade_brightness = 0.0
+    neutral_out = pipe.process(base.copy())
+    assert changed(base, neutral_out) < changed(base, out)
+    s.camera_effect = "no-existe"
+    assert pipe.process(base.copy()).shape == base.shape
+    pipe.close()
+
+
+def test_camera_effect_applies_over_mask(library, monkeypatch, isolated_appdata):
+    from visagecam.processing import pipeline as pipeline_module
+
+    monkeypatch.setattr(pipeline_module, "FaceTracker", StubTracker)
+    s = Settings()
+    s.active_mask = "fox"
+    s.camera_effect = "bw"
+    pipe = pipeline_module.FramePipeline(s, library)
+    for _ in range(6):
+        out = pipe.process(make_frame())
+    assert abs(float(out[..., 0].mean()) - float(out[..., 2].mean())) < 3.0
+    pipe.close()
