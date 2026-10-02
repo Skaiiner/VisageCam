@@ -4,6 +4,6 @@ import os
 
 os.environ.setdefault("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS", "0")
 
-__version__ = "1.5.1"
+__version__ = "1.5.2"
 __author__ = "Skain"
 __copyright__ = "Copyright (c) 2026 Skain"

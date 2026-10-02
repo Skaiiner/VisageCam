@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.5.2
+
+- Publicacion automatica: hook de git que sube cada commit a GitHub (`scripts/hooks/post-commit`, `scripts/install_hooks.bat`).
+
 ## 1.5.1
 
 - Codigo reorganizado: el catalogo de disenos pasa a `masks/catalog/` (creaturas, robots, antifaces y accesorios) y las paginas de la interfaz a un paquete `ui/pages/` con un modulo por pagina.

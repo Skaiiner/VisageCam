@@ -1,0 +1,8 @@
+#!/bin/sh
+branch=$(git rev-parse --abbrev-ref HEAD)
+if git push -u origin "$branch" >/dev/null 2>&1; then
+    echo "VisageCam: cambios subidos a GitHub ($branch)"
+else
+    echo "VisageCam: no se pudo subir a GitHub; se reintentara con el proximo commit" >&2
+fi
+exit 0

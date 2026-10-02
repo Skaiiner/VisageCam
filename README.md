@@ -110,6 +110,10 @@ git branch -M main
 git push -u origin main
 ```
 
+## Publicacion automatica en GitHub
+
+El repositorio incluye un hook de git (`scripts/hooks/post-commit`) que sube cada commit a GitHub al instante. Se activa con `git config core.hooksPath scripts/hooks` o ejecutando `scripts/install_hooks.bat`. Si la subida falla (sin conexion, por ejemplo), el commit se conserva y se publica con el siguiente.
+
 ## Autor y derechos
 
 Copyright (c) 2026 Skain. Todos los derechos reservados. Consulta el archivo [LICENSE](LICENSE).
