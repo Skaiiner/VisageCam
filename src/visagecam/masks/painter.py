@@ -1,6 +1,8 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import math
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Callable, Sequence
 
 import cv2
 import numpy as np
@@ -52,8 +54,9 @@ def linear(c0: Color, c1: Color, p0: tuple[float, float], p1: tuple[float, float
     return fn
 
 
-def radial(c_in: Color, c_out: Color, center: tuple[float, float], radius: float,
-           squash: float = 1.0) -> ColorSource:
+def radial(
+    c_in: Color, c_out: Color, center: tuple[float, float], radius: float, squash: float = 1.0
+) -> ColorSource:
     a = np.array(c_in, dtype=np.float32)
     b = np.array(c_out, dtype=np.float32)
 
@@ -116,7 +119,9 @@ class Canvas:
         self.rng = np.random.default_rng(seed)
         self._noise: dict[float, np.ndarray] = {}
 
-    def _raster(self, pts: np.ndarray, draw: Callable[[np.ndarray, np.ndarray], None], margin: float = 4) -> Shape:
+    def _raster(
+        self, pts: np.ndarray, draw: Callable[[np.ndarray, np.ndarray], None], margin: float = 4
+    ) -> Shape:
         p = pts * self.ss
         x0 = int(max(0, math.floor(p[:, 0].min() - margin)))
         y0 = int(max(0, math.floor(p[:, 1].min() - margin)))
@@ -243,7 +248,9 @@ class Canvas:
         if grain:
             col *= (1.0 + grain * self.noise(grain_scale)[sl])[..., None]
         if streak:
-            col *= (1.0 + streak * self.noise(0.8)[sl] * np.linspace(0.6, 1.0, m.shape[0])[:, None])[..., None]
+            col *= (1.0 + streak * self.noise(0.8)[sl] * np.linspace(0.6, 1.0, m.shape[0])[:, None])[
+                ..., None
+            ]
         col = np.clip(col, 0.0, 255.0)
         a = m * opacity
         if clip:
@@ -256,8 +263,16 @@ class Canvas:
         self.pre[sl] = col * a[..., None] + self.pre[sl] * (1.0 - a[..., None])
         self.a[sl] = a + self.a[sl] * (1.0 - a)
 
-    def shadow(self, shape: Shape, dx: float, dy: float, blur: float, opacity: float,
-               clip: bool = True, color: Color = (0, 0, 0)) -> None:
+    def shadow(
+        self,
+        shape: Shape,
+        dx: float,
+        dy: float,
+        blur: float,
+        opacity: float,
+        clip: bool = True,
+        color: Color = (0, 0, 0),
+    ) -> None:
         moved = Shape(shape.x0 + int(dx * self.ss), shape.y0 + int(dy * self.ss), shape.m)
         self.paint(moved.blurred(blur * self.ss), color, opacity=opacity, clip=clip)
 
@@ -304,11 +319,22 @@ class Canvas:
             c = palette[self.rng.integers(0, len(palette))] * self.rng.uniform(0.86, 1.12)
             c = np.clip(c, 0, 255)
             end = (px + math.cos(angle) * ln, py + math.sin(angle) * ln)
-            mid = ((px + end[0]) / 2 + math.cos(angle + 1.57) * ln * curl, (py + end[1]) / 2 + math.sin(angle + 1.57) * ln * curl)
+            mid = (
+                (px + end[0]) / 2 + math.cos(angle + 1.57) * ln * curl,
+                (py + end[1]) / 2 + math.sin(angle + 1.57) * ln * curl,
+            )
             pts = np.array([[px, py], mid, end], dtype=np.float64)
             pts = np.round(pts * 16).astype(np.int32)
             col = (float(c[2]), float(c[1]), float(c[0]), 255.0)
-            cv2.polylines(layer, [pts], False, col, max(1, int(round(width * self.ss * self.rng.uniform(0.6, 1.1)))), cv2.LINE_AA, 4)
+            cv2.polylines(
+                layer,
+                [pts],
+                False,
+                col,
+                max(1, int(round(width * self.ss * self.rng.uniform(0.6, 1.1)))),
+                cv2.LINE_AA,
+                4,
+            )
         alpha = layer[:, :, 3].astype(np.float32) / 255.0 * shape.m * opacity
         rgb = layer[:, :, 2::-1].astype(np.float32)
         sl = (slice(shape.y0, shape.y1), slice(shape.x0, shape.x1))

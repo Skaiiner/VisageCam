@@ -1,11 +1,17 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import argparse
 import sys
 
 
 def parse(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="visagecam", description="VisageCam")
-    parser.add_argument("--install-shortcuts", action="store_true", help="crea el acceso directo en el menu Inicio")
-    parser.add_argument("--desktop", action="store_true", help="con --install-shortcuts, crea tambien uno en el escritorio")
+    parser.add_argument(
+        "--install-shortcuts", action="store_true", help="crea el acceso directo en el menu Inicio"
+    )
+    parser.add_argument(
+        "--desktop", action="store_true", help="con --install-shortcuts, crea tambien uno en el escritorio"
+    )
     parser.add_argument("--remove-shortcuts", action="store_true", help="elimina los accesos directos")
     return parser.parse_args(argv)
 

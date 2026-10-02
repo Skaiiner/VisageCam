@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import os
 import sys
 from pathlib import Path

@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import json
 
 import cv2
@@ -70,7 +72,9 @@ def test_mouth_ratio_reacts_to_opening():
 
 def test_generated_assets_complete(library):
     assert [m.mask_id for m in library.all()[: len(generator.MASK_ORDER)]] == generator.MASK_ORDER
-    assert [m.mask_id for m in library.accessories()[: len(generator.ACCESSORY_ORDER)]] == generator.ACCESSORY_ORDER
+    assert [
+        m.mask_id for m in library.accessories()[: len(generator.ACCESSORY_ORDER)]
+    ] == generator.ACCESSORY_ORDER
     assert len(generator.MASK_ORDER) >= 14 and len(generator.ACCESSORY_ORDER) >= 10
     for mask in library.all():
         assert mask.image.shape[2] == 4 and mask.anchors
@@ -151,8 +155,12 @@ def test_shortcuts_are_created_and_removed(tmp_path):
     assert [p.name for p in created] == ["VisageCam.lnk", "VisageCam.lnk"]
     assert all(p.exists() for p in created)
     script = "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:VC); $s.TargetPath; $s.Arguments; $s.IconLocation"
-    info = subprocess.run(["powershell", "-NoProfile", "-Command", script], capture_output=True, text=True,
-                          env={**__import__("os").environ, "VC": str(created[0])}).stdout.splitlines()
+    info = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", script],
+        capture_output=True,
+        text=True,
+        env={**__import__("os").environ, "VC": str(created[0])},
+    ).stdout.splitlines()
     assert info[0].lower().endswith(("pythonw.exe", "python.exe")) and info[1] == "-m visagecam"
     assert info[2].endswith("visagecam.ico,0") and shortcuts.icon_path().exists()
     assert len(shortcuts.remove(start_menu=start, desktop_folder=desktop)) == 2
@@ -164,7 +172,9 @@ def test_cli_flags_do_not_start_the_app(tmp_path, monkeypatch):
     from visagecam.__main__ import main
 
     calls = []
-    monkeypatch.setattr(shortcuts, "install", lambda desktop=False: calls.append(("install", desktop)) or [tmp_path / "x.lnk"])
+    monkeypatch.setattr(
+        shortcuts, "install", lambda desktop=False: calls.append(("install", desktop)) or [tmp_path / "x.lnk"]
+    )
     monkeypatch.setattr(shortcuts, "remove", lambda: calls.append(("remove",)) or [])
     assert main(["--install-shortcuts", "--desktop"]) == 0
     assert main(["--remove-shortcuts"]) == 0
@@ -268,3 +278,52 @@ def test_primary_profile_includes_distortion():
     s.distortion_strength = 1.4
     profile = s.primary_profile()
     assert profile.distortion == "slim_face" and profile.distortion_strength == 1.4
+
+
+def test_every_python_file_carries_the_copyright_header():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    header = "# Copyright (c) 2026 Skain. Todos los derechos reservados."
+    files = [f for folder in ("src", "tests", "scripts") for f in (root / folder).rglob("*.py")]
+    missing = [
+        str(f)
+        for f in files
+        if "egg-info" not in str(f) and f.read_text(encoding="utf-8").splitlines()[0] != header
+    ]
+    assert not missing
+
+
+def test_authorship_metadata_is_consistent():
+    from pathlib import Path
+
+    import visagecam
+
+    root = Path(__file__).resolve().parents[1]
+    assert visagecam.__author__ == "Skain"
+    assert visagecam.__copyright__ == "Copyright (c) 2026 Skain"
+    assert "Copyright (c) 2026 Skain. Todos los derechos reservados." in (root / "LICENSE").read_text(
+        encoding="utf-8"
+    )
+    assert 'name = "Skain"' in (root / "pyproject.toml").read_text(encoding="utf-8")
+
+
+def test_set_author_script_is_idempotent(tmp_path):
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "set_author", Path(__file__).resolve().parents[1] / "scripts" / "set_author.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sample = tmp_path / "sample.py"
+    sample.write_text("import os\n", encoding="utf-8")
+    assert module.apply_header(sample, "Skain", 2026) is True
+    assert module.apply_header(sample, "Skain", 2026) is False
+    assert module.apply_header(sample, "Otro Nombre", 2027) is True
+    assert (
+        sample.read_text(encoding="utf-8").splitlines()[0]
+        == "# Copyright (c) 2027 Otro Nombre. Todos los derechos reservados."
+    )
+    assert sample.read_text(encoding="utf-8").count("Copyright") == 1

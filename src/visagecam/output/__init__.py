@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 from visagecam.output.mjpeg_server import MjpegServer
 from visagecam.output.virtual_camera import VirtualCameraError, VirtualCameraOutput
 

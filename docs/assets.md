@@ -56,4 +56,4 @@ Los elementos se guardan en `%APPDATA%\VisageCam\masks\custom` y `%APPDATA%\Visa
 
 ## Crear nuevos disenos por codigo
 
-Registra una funcion que devuelva un arreglo BGRA en `src/visagecam/masks/designs.py` (mascaras) o `src/visagecam/masks/accessories.py` (accesorios) y vuelve a generar. El modulo `painter.py` ofrece formas, degradados, biselado, pelo y sombras.
+Registra una funcion que devuelva un arreglo BGRA en `src/visagecam/masks/catalog/` (agrupadas en `creatures.py`, `robots.py` y `masquerade.py`, o en `accessories.py` para accesorios) y registrala en `catalog/__init__.py` y vuelve a generar. El modulo `painter.py` ofrece formas, degradados, biselado, pelo y sombras.

@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 import re
 import shutil
@@ -128,7 +130,16 @@ class MaskLibrary:
         prefix = "custom" if kind == "mask" else "acc"
         mask_id = f"{prefix}-{slug}-{int(time.time() * 1000) % 10**10}"
         directory = self.dirs[(kind, False)]
-        write_mask(directory, mask_id, label, bgra, [], landmarks, kind=kind, slot=slot if kind == "accessory" else "free")
+        write_mask(
+            directory,
+            mask_id,
+            label,
+            bgra,
+            [],
+            landmarks,
+            kind=kind,
+            slot=slot if kind == "accessory" else "free",
+        )
         item = read_mask(directory / f"{mask_id}.json", False)
         item.kind = kind
         self._items[item.mask_id] = item

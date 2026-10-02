@@ -1,5 +1,7 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import math
-from typing import Callable
+from collections.abc import Callable
 
 from visagecam.masks.model import Anchor
 

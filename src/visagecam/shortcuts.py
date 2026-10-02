@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 import os
 import subprocess
@@ -79,7 +81,9 @@ def create_shortcut(directory: Path, name: str = APP_NAME) -> Path:
     return link
 
 
-def install(desktop: bool = False, start_menu: Path | None = None, desktop_folder: Path | None = None) -> list[Path]:
+def install(
+    desktop: bool = False, start_menu: Path | None = None, desktop_folder: Path | None = None
+) -> list[Path]:
     created = [create_shortcut(start_menu or start_menu_dir())]
     if desktop:
         created.append(create_shortcut(desktop_folder or desktop_dir()))

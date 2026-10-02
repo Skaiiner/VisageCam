@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 from dataclasses import dataclass
 from typing import NamedTuple
 
@@ -32,41 +34,41 @@ class DistortionPreset:
 
 
 PRESETS: dict[str, DistortionPreset] = {
-    "big_eyes": DistortionPreset("Ojos grandes", (
-        DistortionPoint(EYE_LEFT, 0.24, 0.55),
-        DistortionPoint(EYE_RIGHT, 0.24, 0.55),
-    )),
-    "tiny_eyes": DistortionPreset("Ojos pequenos", (
-        DistortionPoint(EYE_LEFT, 0.22, -0.45),
-        DistortionPoint(EYE_RIGHT, 0.22, -0.45),
-    )),
-    "big_forehead": DistortionPreset("Frente grande", (
-        DistortionPoint(FOREHEAD, 0.34, 0.45),
-    )),
-    "big_mouth": DistortionPreset("Boca grande", (
-        DistortionPoint(MOUTH_CENTER, 0.2, 0.5),
-    )),
-    "small_nose": DistortionPreset("Nariz pequena", (
-        DistortionPoint(NOSE_TIP, 0.16, -0.55),
-    )),
-    "big_chin": DistortionPreset("Menton grande", (
-        DistortionPoint(CHIN, 0.18, 0.4),
-    )),
-    "slim_face": DistortionPreset("Cara delgada", (
-        DistortionPoint((FACE_EDGE_LEFT,), 0.32, -0.4),
-        DistortionPoint((FACE_EDGE_RIGHT,), 0.32, -0.4),
-    )),
-    "bobble_head": DistortionPreset("Cabeza grande", (
-        DistortionPoint(tuple(FACE_OVAL), 0.62, 0.38),
-    )),
-    "tiny_face": DistortionPreset("Cara mini", (
-        DistortionPoint(tuple(FACE_OVAL), 0.68, -0.32),
-    )),
-    "funhouse": DistortionPreset("Espejo loco", (
-        DistortionPoint(EYE_LEFT, 0.2, 0.6),
-        DistortionPoint(EYE_RIGHT, 0.2, -0.5),
-        DistortionPoint(MOUTH_CENTER, 0.22, 0.55),
-    )),
+    "big_eyes": DistortionPreset(
+        "Ojos grandes",
+        (
+            DistortionPoint(EYE_LEFT, 0.24, 0.55),
+            DistortionPoint(EYE_RIGHT, 0.24, 0.55),
+        ),
+    ),
+    "tiny_eyes": DistortionPreset(
+        "Ojos pequenos",
+        (
+            DistortionPoint(EYE_LEFT, 0.22, -0.45),
+            DistortionPoint(EYE_RIGHT, 0.22, -0.45),
+        ),
+    ),
+    "big_forehead": DistortionPreset("Frente grande", (DistortionPoint(FOREHEAD, 0.34, 0.45),)),
+    "big_mouth": DistortionPreset("Boca grande", (DistortionPoint(MOUTH_CENTER, 0.2, 0.5),)),
+    "small_nose": DistortionPreset("Nariz pequena", (DistortionPoint(NOSE_TIP, 0.16, -0.55),)),
+    "big_chin": DistortionPreset("Menton grande", (DistortionPoint(CHIN, 0.18, 0.4),)),
+    "slim_face": DistortionPreset(
+        "Cara delgada",
+        (
+            DistortionPoint((FACE_EDGE_LEFT,), 0.32, -0.4),
+            DistortionPoint((FACE_EDGE_RIGHT,), 0.32, -0.4),
+        ),
+    ),
+    "bobble_head": DistortionPreset("Cabeza grande", (DistortionPoint(tuple(FACE_OVAL), 0.62, 0.38),)),
+    "tiny_face": DistortionPreset("Cara mini", (DistortionPoint(tuple(FACE_OVAL), 0.68, -0.32),)),
+    "funhouse": DistortionPreset(
+        "Espejo loco",
+        (
+            DistortionPoint(EYE_LEFT, 0.2, 0.6),
+            DistortionPoint(EYE_RIGHT, 0.2, -0.5),
+            DistortionPoint(MOUTH_CENTER, 0.22, 0.55),
+        ),
+    ),
 }
 
 
@@ -87,7 +89,9 @@ class DistortionRenderer:
             self._apply(frame, center, radius, strength, width, height)
 
     @staticmethod
-    def _apply(frame: np.ndarray, center: np.ndarray, radius: float, strength: float, width: int, height: int) -> None:
+    def _apply(
+        frame: np.ndarray, center: np.ndarray, radius: float, strength: float, width: int, height: int
+    ) -> None:
         if radius < 6 or abs(strength) < 0.02:
             return
         pad = int(radius) + 2

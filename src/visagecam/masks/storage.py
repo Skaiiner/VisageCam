@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import json
 import logging
 from pathlib import Path
@@ -22,9 +24,7 @@ def load_image_bgra(path: Path) -> np.ndarray:
     longest = max(height, width)
     if longest > MAX_SIDE:
         scale = MAX_SIDE / longest
-        bgra = cv2.resize(
-            bgra, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_AREA
-        )
+        bgra = cv2.resize(bgra, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_AREA)
     return np.ascontiguousarray(bgra)
 
 

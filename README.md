@@ -54,19 +54,26 @@ La primera vez, mira de frente con la boca cerrada durante un segundo para calib
 ```
 .
 ├── src/visagecam/
-│   ├── capture/        captura de la webcam
-│   ├── processing/     seguimiento facial, mallas, superposicion, belleza, fondo, motor
-│   ├── masks/          modelo, biblioteca, importacion, recorte y generacion de recursos
-│   ├── output/         camara virtual y flujo MJPEG
-│   ├── obs/            cliente OBS WebSocket v5
-│   ├── ui/             interfaz PySide6
-│   ├── app.py          arranque
-│   ├── config.py       configuracion persistente
-│   └── backgrounds.py  biblioteca de fondos
-├── tests/              pruebas automaticas
-├── docs/               arquitectura, OBS, recursos y problemas frecuentes
-├── scripts/            ejecucion, pruebas y generacion de recursos
-├── pyproject.toml
+│   ├── capture/          captura de la webcam
+│   ├── processing/       seguimiento facial, mallas, superposicion, belleza,
+│   │                     deformaciones, fondo, mejora de imagen y motor
+│   ├── masks/
+│   │   ├── catalog/      disenos incluidos: creatures, robots, masquerade, accessories
+│   │   ├── painter.py    herramientas de dibujo procedural
+│   │   └── ...           modelo, biblioteca, importacion, recorte y generador
+│   ├── output/           camara virtual y flujo MJPEG
+│   ├── obs/              cliente OBS WebSocket v5
+│   ├── ui/
+│   │   ├── pages/        una pagina por modulo (filters, distortion, accessories...)
+│   │   └── ...           tema, iconos, componentes, estudio de imagenes, ventana
+│   ├── app.py            arranque
+│   ├── config.py         configuracion persistente y perfiles de filtros
+│   └── backgrounds.py    biblioteca de fondos
+├── tests/                pruebas automaticas
+├── docs/                 arquitectura, OBS, recursos y problemas frecuentes
+├── scripts/              ejecucion, pruebas, iconos, accesos directos y autoria
+├── LICENSE
+├── pyproject.toml        metadatos, dependencias y configuracion de ruff
 ├── requirements.txt
 ├── requirements-dev.txt
 └── CHANGELOG.md
@@ -102,3 +109,9 @@ git remote add origin https://github.com/TU_USUARIO/visagecam.git
 git branch -M main
 git push -u origin main
 ```
+
+## Autor y derechos
+
+Copyright (c) 2026 Skain. Todos los derechos reservados. Consulta el archivo [LICENSE](LICENSE).
+
+Para cambiar el titular en todos los archivos a la vez: `python scripts/set_author.py "Tu nombre"`.

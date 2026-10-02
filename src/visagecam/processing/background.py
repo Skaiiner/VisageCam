@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 from pathlib import Path
 
@@ -56,7 +58,9 @@ class BackgroundRenderer:
         width, height = size
         scale = max(width / data.shape[1], height / data.shape[0])
         resized = cv2.resize(
-            data, (int(data.shape[1] * scale + 0.5), int(data.shape[0] * scale + 0.5)), interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_CUBIC
+            data,
+            (int(data.shape[1] * scale + 0.5), int(data.shape[0] * scale + 0.5)),
+            interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_CUBIC,
         )
         ox = (resized.shape[1] - width) // 2
         oy = (resized.shape[0] - height) // 2
@@ -77,7 +81,9 @@ class BackgroundRenderer:
             self._full = to_u8(self._person_mask(frame))
         return self._full
 
-    def backdrop(self, frame: np.ndarray, settings: Settings, size: tuple[int, int] | None = None) -> np.ndarray | None:
+    def backdrop(
+        self, frame: np.ndarray, settings: Settings, size: tuple[int, int] | None = None
+    ) -> np.ndarray | None:
         width, height = size or (frame.shape[1], frame.shape[0])
         mode = settings.background_mode
         if mode == "blur":

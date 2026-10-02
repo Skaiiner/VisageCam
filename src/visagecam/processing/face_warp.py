@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import math
 from dataclasses import dataclass
 
@@ -41,7 +43,9 @@ class FaceTexture:
             self.levels.append((current, (points * scale)[self.triangles]))
             if min(current.shape[:2]) < 320:
                 break
-            current = cv2.resize(current, (current.shape[1] // 2, current.shape[0] // 2), interpolation=cv2.INTER_AREA)
+            current = cv2.resize(
+                current, (current.shape[1] // 2, current.shape[0] // 2), interpolation=cv2.INTER_AREA
+            )
             scale *= 0.5
         oval = np.zeros(image.shape[:2], np.uint8)
         cv2.fillConvexPoly(oval, np.round(points[FACE_OVAL]).astype(np.int32), 255)
@@ -139,7 +143,9 @@ class FaceWarpRenderer:
         if (sw, sh) != (bw, bh):
             map_x = cv2.resize(map_x, (bw, bh), interpolation=cv2.INTER_LINEAR)
             map_y = cv2.resize(map_y, (bw, bh), interpolation=cv2.INTER_LINEAR)
-        warped = cv2.remap(level_image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+        warped = cv2.remap(
+            level_image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0
+        )
 
         k = sx
         cover = (idmap > 0).astype(np.uint8) * 255
@@ -156,15 +162,21 @@ class FaceWarpRenderer:
             hole = np.zeros((sh, sw), np.uint8)
             if photo:
                 for ring in (EYE_RING_LEFT, EYE_RING_RIGHT):
-                    cv2.fillPoly(hole, [np.round(local[ring] * factor * 16).astype(np.int32)], 255, cv2.LINE_AA, 4)
+                    cv2.fillPoly(
+                        hole, [np.round(local[ring] * factor * 16).astype(np.int32)], 255, cv2.LINE_AA, 4
+                    )
             reveal = _smoothstep(0.016, 0.055, mouth_open_ratio(live))
             if reveal > 0.02:
                 mouth = np.zeros((sh, sw), np.uint8)
-                cv2.fillPoly(mouth, [np.round(local[LIPS_INNER] * factor * 16).astype(np.int32)], 255, cv2.LINE_AA, 4)
+                cv2.fillPoly(
+                    mouth, [np.round(local[LIPS_INNER] * factor * 16).astype(np.int32)], 255, cv2.LINE_AA, 4
+                )
                 hole = np.maximum(hole, cv2.convertScaleAbs(mouth, alpha=reveal))
             if hole.any():
                 grow = max(1, int(live_width * 0.016 * k))
-                hole = cv2.dilate(hole, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (grow * 2 + 1, grow * 2 + 1)))
+                hole = cv2.dilate(
+                    hole, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (grow * 2 + 1, grow * 2 + 1))
+                )
                 hole = cv2.GaussianBlur(hole, (0, 0), max(1.0, live_width * 0.013 * k))
                 if (sw, sh) != (bw, bh):
                     hole = cv2.resize(hole, (bw, bh), interpolation=cv2.INTER_LINEAR)
@@ -186,13 +198,17 @@ class FaceWarpRenderer:
             (settings.mask_offset_x * fw, settings.mask_offset_y * fw),
         )
         dst = apply_points(adj, landmarks[:468])
-        layer = self.render(frame, mask.mask_id, mask.image, mask.face_landmarks, dst, landmarks, settings, True)
+        layer = self.render(
+            frame, mask.mask_id, mask.image, mask.face_landmarks, dst, landmarks, settings, True
+        )
         if layer is None:
             return
         alpha = cv2.convertScaleAbs(layer.alpha, alpha=float(np.clip(settings.mask_opacity, 0.0, 1.0)))
         blend_alpha(frame, layer.x0, layer.y0, layer.bgr, alpha)
 
-    def _match_color(self, layer: np.ndarray, live: np.ndarray, cover: np.ndarray, tex: FaceTexture, strength: float) -> np.ndarray:
+    def _match_color(
+        self, layer: np.ndarray, live: np.ndarray, cover: np.ndarray, tex: FaceTexture, strength: float
+    ) -> np.ndarray:
         scale = 96.0 / max(live.shape[1], 1)
         small = cv2.resize(live, (96, max(1, int(live.shape[0] * scale))), interpolation=cv2.INTER_AREA)
         small_mask = cv2.resize(cover, (small.shape[1], small.shape[0]), interpolation=cv2.INTER_AREA)

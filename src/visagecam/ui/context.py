@@ -1,5 +1,7 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from visagecam.backgrounds import BackgroundLibrary
 from visagecam.config import Settings

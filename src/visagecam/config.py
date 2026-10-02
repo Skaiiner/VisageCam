@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import json
 import logging
 import os
@@ -33,18 +35,24 @@ def _load_dict_into(instance, raw: dict, skip: tuple[str, ...] = ()) -> None:
 
 
 PROFILE_RANGES = (
-    ("mask_scale", 0.2, 3.0), ("mask_rotation", -180.0, 180.0), ("mask_offset_x", -1.0, 1.0),
-    ("mask_offset_y", -1.0, 1.0), ("mask_opacity", 0.0, 1.0), ("color_match", 0.0, 1.0),
-    ("light_match", 0.0, 1.0), ("edge_softness", 0.0, 1.0),
-    ("beauty_smooth", 0.0, 1.0), ("beauty_bright", 0.0, 1.0), ("beauty_lips", 0.0, 1.0),
-    ("beauty_teeth", 0.0, 1.0), ("distortion_strength", 0.3, 2.0),
+    ("mask_scale", 0.2, 3.0),
+    ("mask_rotation", -180.0, 180.0),
+    ("mask_offset_x", -1.0, 1.0),
+    ("mask_offset_y", -1.0, 1.0),
+    ("mask_opacity", 0.0, 1.0),
+    ("color_match", 0.0, 1.0),
+    ("light_match", 0.0, 1.0),
+    ("edge_softness", 0.0, 1.0),
+    ("beauty_smooth", 0.0, 1.0),
+    ("beauty_bright", 0.0, 1.0),
+    ("beauty_lips", 0.0, 1.0),
+    ("beauty_teeth", 0.0, 1.0),
+    ("distortion_strength", 0.3, 2.0),
 )
 
 
 @dataclass
 class FilterProfile:
-    """Filtros de una persona: mascara, accesorios y belleza, independientes de la camara y del fondo."""
-
     active_mask: str = ""
     mask_scale: float = 1.0
     mask_rotation: float = 0.0

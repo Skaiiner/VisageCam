@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 import time
 from pathlib import Path
@@ -90,8 +92,13 @@ class DropZone(QLabel):
 
 
 class ImageStudio(QDialog):
-    def __init__(self, ctx: Context, parent: QWidget | None = None, initial_kind: str = "mask",
-                 path: Path | None = None) -> None:
+    def __init__(
+        self,
+        ctx: Context,
+        parent: QWidget | None = None,
+        initial_kind: str = "mask",
+        path: Path | None = None,
+    ) -> None:
         super().__init__(parent)
         self.ctx = ctx
         self.setWindowTitle("Anadir imagen")
@@ -132,7 +139,9 @@ class ImageStudio(QDialog):
         title = QLabel("Convierte una imagen en filtro")
         title.setObjectName("h1")
         right.addWidget(title)
-        right.addWidget(muted("VisageCam analiza la imagen y elige la mejor forma de ponertela. Puedes cambiarlo aqui."))
+        right.addWidget(
+            muted("VisageCam analiza la imagen y elige la mejor forma de ponertela. Puedes cambiarlo aqui.")
+        )
 
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText("Nombre")
@@ -165,11 +174,16 @@ class ImageStudio(QDialog):
             grid.addWidget(btn, index // 3, index % 3)
         right.addWidget(self.slot_box)
 
-        self.warp_row = SwitchRow("Deformar sobre mi rostro", "Sigue tus gestos punto a punto. Desactivalo para usarla como pegatina.")
+        self.warp_row = SwitchRow(
+            "Deformar sobre mi rostro",
+            "Sigue tus gestos punto a punto. Desactivalo para usarla como pegatina.",
+        )
         self.warp_row.setChecked(True)
         self.warp_row.toggled.connect(lambda _v: self._refresh_preview())
         right.addWidget(self.warp_row)
-        self.cut_row = SwitchRow("Quitar el fondo automaticamente", "Recorta el objeto principal para que solo se vea el.")
+        self.cut_row = SwitchRow(
+            "Quitar el fondo automaticamente", "Recorta el objeto principal para que solo se vea el."
+        )
         self.cut_row.setChecked(True)
         self.cut_row.toggled.connect(lambda _v: self._refresh_preview())
         right.addWidget(self.cut_row)
@@ -296,11 +310,17 @@ class ImageStudio(QDialog):
         else:
             self.cut_row.setEnabled(True)
         if accessory:
-            self.kind_hint.setText("Se ancla a una zona de tu cara y se mueve con ella. Puedes combinar varios.")
+            self.kind_hint.setText(
+                "Se ancla a una zona de tu cara y se mueve con ella. Puedes combinar varios."
+            )
         elif a is not None and a.landmarks is not None:
-            self.kind_hint.setText("Se detecto una cara: la imagen se deformara sobre tu rostro y seguira tus gestos.")
+            self.kind_hint.setText(
+                "Se detecto una cara: la imagen se deformara sobre tu rostro y seguira tus gestos."
+            )
         else:
-            self.kind_hint.setText("Se coloca centrada sobre tu cara. Puedes ajustar escala, giro y posicion.")
+            self.kind_hint.setText(
+                "Se coloca centrada sobre tu cara. Puedes ajustar escala, giro y posicion."
+            )
 
     def _refresh_preview(self) -> None:
         a = self.analysis
@@ -326,7 +346,11 @@ class ImageStudio(QDialog):
         self.ctx.runner.run(
             lambda: self.ctx.library.add(a, kind, slot, name, use_cutout, face_warp),
             self._saved,
-            lambda message: (self.status.setText(message), self.ok_button.setEnabled(True), self.ctx.notify(message, "error")),
+            lambda message: (
+                self.status.setText(message),
+                self.ok_button.setEnabled(True),
+                self.ctx.notify(message, "error"),
+            ),
         )
 
     def _saved(self, item) -> None:

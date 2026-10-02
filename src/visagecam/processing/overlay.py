@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import math
 
 import cv2
@@ -6,6 +8,7 @@ import numpy as np
 from visagecam.config import Settings
 from visagecam.masks.model import Mask
 from visagecam.processing.blend import blend_premultiplied, to_u8
+from visagecam.processing.face_warp import FaceWarpRenderer
 from visagecam.processing.landmarks import (
     EYE_LEFT,
     EYE_RIGHT,
@@ -18,7 +21,6 @@ from visagecam.processing.landmarks import (
     face_width,
     group_center,
 )
-from visagecam.processing.face_warp import FaceWarpRenderer
 from visagecam.processing.transforms import adjustment, affine_fit, apply_points, similarity, to3
 
 SLOT_WIDTH = {"head": 1.15, "eyes": 1.05, "mouth": 0.55, "ears": 1.3, "free": 1.6}
@@ -41,7 +43,9 @@ class OverlayRenderer:
             levels = [pre.astype(np.uint8)]
             while min(levels[-1].shape[:2]) >= 256 and len(levels) < 4:
                 last = levels[-1]
-                levels.append(cv2.resize(last, (last.shape[1] // 2, last.shape[0] // 2), interpolation=cv2.INTER_AREA))
+                levels.append(
+                    cv2.resize(last, (last.shape[1] // 2, last.shape[0] // 2), interpolation=cv2.INTER_AREA)
+                )
             self._pyramids[mask.mask_id] = levels
         return levels
 
@@ -123,7 +127,9 @@ class OverlayRenderer:
         keep4 = cv2.merge([255 - cover8] * 4)
         cover4 = cv2.merge([cover8] * 4)
         base = np.ascontiguousarray(warped[sl_w])
-        merged = cv2.add(cv2.multiply(base, keep4, scale=1.0 / 255.0), cv2.multiply(face4, cover4, scale=1.0 / 255.0))
+        merged = cv2.add(
+            cv2.multiply(base, keep4, scale=1.0 / 255.0), cv2.multiply(face4, cover4, scale=1.0 / 255.0)
+        )
         out = warped.copy()
         out[sl_w] = merged
         return out
@@ -141,7 +147,12 @@ class OverlayRenderer:
         height, width = frame.shape[:2]
         fw = face_width(landmarks)
         if adjust is None:
-            adjust = (settings.mask_scale, settings.mask_rotation, settings.mask_offset_x, settings.mask_offset_y)
+            adjust = (
+                settings.mask_scale,
+                settings.mask_rotation,
+                settings.mask_offset_x,
+                settings.mask_offset_y,
+            )
         if opacity is None:
             opacity = float(np.clip(settings.mask_opacity, 0.0, 1.0))
         canon = expression[1] if expression is not None else None
@@ -185,7 +196,9 @@ class OverlayRenderer:
             warped = cv2.GaussianBlur(warped, (0, 0), 0.4 + softness)
         if expression is not None:
             dst = apply_points(adj, landmarks[:468])
-            layer = expression[0].render(frame, mask.mask_id + "#expr", mask.image, canon, dst, landmarks, settings, False)
+            layer = expression[0].render(
+                frame, mask.mask_id + "#expr", mask.image, canon, dst, landmarks, settings, False
+            )
             if layer is not None:
                 warped = self._merge_face(warped, x0, y0, layer)
         gain = self._light_gain(frame, landmarks, mask, float(settings.light_match))

@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import cv2
 import numpy as np
 
@@ -29,7 +31,10 @@ def _scaled(alpha8: np.ndarray, amount: float) -> np.ndarray:
 class BeautyRenderer:
     @staticmethod
     def active(settings: Settings) -> bool:
-        return max(settings.beauty_smooth, settings.beauty_bright, settings.beauty_lips, settings.beauty_teeth) > 0.01
+        return (
+            max(settings.beauty_smooth, settings.beauty_bright, settings.beauty_lips, settings.beauty_teeth)
+            > 0.01
+        )
 
     def draw(self, frame: np.ndarray, landmarks: np.ndarray, settings: Settings) -> None:
         height, width = frame.shape[:2]
@@ -55,7 +60,11 @@ class BeautyRenderer:
         smooth = float(np.clip(settings.beauty_smooth, 0.0, 1.0))
         if smooth > 0.01:
             scale = min(1.0, 320.0 / roi.shape[1])
-            small = cv2.resize(work, (max(8, int(roi.shape[1] * scale)), max(8, int(roi.shape[0] * scale))), interpolation=cv2.INTER_AREA)
+            small = cv2.resize(
+                work,
+                (max(8, int(roi.shape[1] * scale)), max(8, int(roi.shape[0] * scale))),
+                interpolation=cv2.INTER_AREA,
+            )
             filtered = cv2.bilateralFilter(small, 7, 28 + 40 * smooth, 7)
             filtered = cv2.resize(filtered, (roi.shape[1], roi.shape[0]), interpolation=cv2.INTER_LINEAR)
             work = mix(work, filtered, _scaled(skin, smooth * 0.85))
@@ -80,7 +89,10 @@ class BeautyRenderer:
                 mx0, mx1 = max(0, xs.min() - 3), min(shape[1], xs.max() + 4)
                 my0, my1 = max(0, ys.min() - 3), min(shape[0], ys.max() + 4)
                 crop = np.ascontiguousarray(work[my0:my1, mx0:mx1])
-                soft = cv2.GaussianBlur(mouth[my0:my1, mx0:mx1], (0, 0), max(1.0, fw * 0.004)).astype(np.float32) / 255.0
+                soft = (
+                    cv2.GaussianBlur(mouth[my0:my1, mx0:mx1], (0, 0), max(1.0, fw * 0.004)).astype(np.float32)
+                    / 255.0
+                )
                 hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV).astype(np.float32)
                 weight = soft * np.clip((hsv[:, :, 2] - 110.0) / 60.0, 0.0, 1.0) * teeth
                 hsv[:, :, 1] *= 1.0 - 0.7 * weight

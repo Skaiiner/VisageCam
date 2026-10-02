@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import math
 import time
 
@@ -9,8 +11,34 @@ from visagecam.processing.landmarks import FACE_OVAL
 UPPER_LIP = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308]
 LOWER_LIP = [324, 318, 402, 317, 14, 87, 178, 88, 95]
 JAW = [
-    14, 87, 178, 88, 95, 317, 402, 318, 324, 17, 84, 181, 91, 146, 405, 321, 375, 200, 199, 175,
-    152, 377, 400, 378, 379, 365, 397, 288,
+    14,
+    87,
+    178,
+    88,
+    95,
+    317,
+    402,
+    318,
+    324,
+    17,
+    84,
+    181,
+    91,
+    146,
+    405,
+    321,
+    375,
+    200,
+    199,
+    175,
+    152,
+    377,
+    400,
+    378,
+    379,
+    365,
+    397,
+    288,
 ]
 
 
@@ -38,7 +66,9 @@ def _layout() -> np.ndarray:
 LAYOUT = _layout()
 
 
-def live_face(scale: float = 170.0, rotation: float = 0.0, center=(640.0, 360.0), open_: float = 0.0) -> np.ndarray:
+def live_face(
+    scale: float = 170.0, rotation: float = 0.0, center=(640.0, 360.0), open_: float = 0.0
+) -> np.ndarray:
     points = LAYOUT.copy()
     mid = points[UPPER_LIP + LOWER_LIP, 1].mean()
     points[UPPER_LIP, 1] = mid - 0.004 - open_ * 0.2

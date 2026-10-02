@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import sys
 from pathlib import Path
 
@@ -44,7 +46,10 @@ def main() -> int:
     TARGET.mkdir(parents=True, exist_ok=True)
     image = build()
     image.resize((256, 256), Image.LANCZOS).save(TARGET / "visagecam.png")
-    image.save(TARGET / "visagecam.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    image.save(
+        TARGET / "visagecam.ico",
+        sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+    )
     print(TARGET / "visagecam.ico")
     return 0
 

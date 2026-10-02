@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import math
 
 import cv2
@@ -60,7 +62,9 @@ class Denoiser:
             self.reset()
             return frame
         height, width = frame.shape[:2]
-        small = cv2.cvtColor(cv2.resize(frame, (width // 8, height // 8), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
+        small = cv2.cvtColor(
+            cv2.resize(frame, (width // 8, height // 8), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY
+        )
         prev, prev_gray = self._prev, self._prev_gray
         if prev is None or prev.shape != frame.shape or prev_gray is None or prev_gray.shape != small.shape:
             self._prev, self._prev_gray = frame, small

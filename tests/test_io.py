@@ -1,7 +1,10 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import asyncio
 import base64
 import hashlib
 import json
+import socket
 import threading
 import time
 import urllib.request
@@ -15,6 +18,13 @@ from visagecam.obs import ObsClient, ObsError
 from visagecam.output import MjpegServer, VirtualCameraError, VirtualCameraOutput
 from visagecam.processing import pipeline as pipeline_module
 from visagecam.processing.engine import Engine
+
+
+def free_port() -> int:
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
 
 PASSWORD, SALT, CHALLENGE = "secreto", "salt123", "chal456"
 
@@ -36,8 +46,18 @@ class MockObs:
         assert self.ready.wait(5)
 
     async def handler(self, ws):
-        await ws.send(json.dumps({"op": 0, "d": {"obsWebSocketVersion": "5.5.0", "rpcVersion": 1,
-                                                   "authentication": {"challenge": CHALLENGE, "salt": SALT}}}))
+        await ws.send(
+            json.dumps(
+                {
+                    "op": 0,
+                    "d": {
+                        "obsWebSocketVersion": "5.5.0",
+                        "rpcVersion": 1,
+                        "authentication": {"challenge": CHALLENGE, "salt": SALT},
+                    },
+                }
+            )
+        )
         ident = json.loads(await ws.recv())
         if ident["d"].get("authentication") != b64(b64(PASSWORD + SALT) + CHALLENGE):
             await ws.close(4009)
@@ -51,13 +71,31 @@ class MockObs:
                 await ws.close()
                 return
             payload = {
-                "GetSceneList": {"currentProgramSceneName": "Juego",
-                                 "scenes": [{"sceneName": "Juego", "sceneIndex": 0}, {"sceneName": "Charla", "sceneIndex": 1}]},
-                "GetSceneItemList": {"sceneItems": [{"sceneItemId": 3, "sourceName": "Chat", "sceneItemEnabled": True}]},
+                "GetSceneList": {
+                    "currentProgramSceneName": "Juego",
+                    "scenes": [
+                        {"sceneName": "Juego", "sceneIndex": 0},
+                        {"sceneName": "Charla", "sceneIndex": 1},
+                    ],
+                },
+                "GetSceneItemList": {
+                    "sceneItems": [{"sceneItemId": 3, "sourceName": "Chat", "sceneItemEnabled": True}]
+                },
                 "GetInputPropertiesListPropertyItems": {"propertyItems": []},
             }.get(kind, {})
-            await ws.send(json.dumps({"op": 7, "d": {"requestType": kind, "requestId": message["requestId"],
-                                                      "requestStatus": {"result": True, "code": 100}, "responseData": payload}}))
+            await ws.send(
+                json.dumps(
+                    {
+                        "op": 7,
+                        "d": {
+                            "requestType": kind,
+                            "requestId": message["requestId"],
+                            "requestStatus": {"result": True, "code": 100},
+                            "responseData": payload,
+                        },
+                    }
+                )
+            )
 
     def _run(self) -> None:
         asyncio.set_event_loop(self.loop)
@@ -72,17 +110,18 @@ class MockObs:
 
     def close(self) -> None:
         self.loop.call_soon_threadsafe(self.stop_event.set)
+        self.thread.join(5)
 
 
 @pytest.fixture()
 def obs_server():
-    server = MockObs(4477)
+    server = MockObs(free_port())
     yield server
     server.close()
 
 
 def test_obs_full_flow(obs_server):
-    client = ObsClient("127.0.0.1", 4477, PASSWORD)
+    client = ObsClient("127.0.0.1", obs_server.port, PASSWORD)
     client.connect()
     assert client.connected
     scenes, current = client.list_scenes()
@@ -102,12 +141,12 @@ def test_obs_full_flow(obs_server):
 
 def test_obs_errors(obs_server):
     with pytest.raises(ObsError):
-        ObsClient("127.0.0.1", 4477, "mal").connect()
+        ObsClient("127.0.0.1", obs_server.port, "mal").connect()
     with pytest.raises(ObsError):
-        ObsClient("127.0.0.1", 4477, "").connect()
+        ObsClient("127.0.0.1", obs_server.port, "").connect()
     with pytest.raises(ObsError):
         ObsClient("127.0.0.1", 1, PASSWORD).connect(timeout=1)
-    client = ObsClient("127.0.0.1", 4477, PASSWORD)
+    client = ObsClient("127.0.0.1", obs_server.port, PASSWORD)
     client.connect()
     obs_server.drop_on = "GetSceneList"
     with pytest.raises(ObsError):
@@ -116,7 +155,7 @@ def test_obs_errors(obs_server):
 
 
 def test_obs_concurrent_requests(obs_server):
-    client = ObsClient("127.0.0.1", 4477, PASSWORD)
+    client = ObsClient("127.0.0.1", obs_server.port, PASSWORD)
     client.connect()
     results, errors = [], []
 

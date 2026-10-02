@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.5.1
+
+- Codigo reorganizado: el catalogo de disenos pasa a `masks/catalog/` (creaturas, robots, antifaces y accesorios) y las paginas de la interfaz a un paquete `ui/pages/` con un modulo por pagina.
+- Estilo uniforme con ruff (formato y orden de importaciones) configurado en `pyproject.toml`.
+- Autoria y derechos de autor: archivo `LICENSE`, cabecera en cada archivo Python, metadatos del paquete y firma en la interfaz. Script `scripts/set_author.py` para cambiar el titular.
+
 ## 1.5.0
 
 - Deformaciones de cara en directo (ojos grandes/pequenos, boca grande, nariz pequena, menton grande, cara delgada, cabeza grande, cara mini, espejo loco), en una pestana **Deformar** separada de las mascaras, combinable con ellas. Disponible tambien para la Persona 2.

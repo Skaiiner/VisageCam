@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import random
 import sys
 import time
@@ -6,7 +8,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
-from PySide6.QtCore import QMimeData, QPointF, QUrl, Qt
+from PySide6.QtCore import QMimeData, QPointF, Qt, QUrl
 from PySide6.QtGui import QDropEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFileDialog
@@ -82,14 +84,20 @@ def test_window_shows_live_preview_and_pills(window):
 def test_every_page_and_control_is_operable(window, errors, monkeypatch, tmp_path):
     rng = random.Random(5)
     bg = tmp_path / "fondo.jpg"
-    cv2.imencode(".jpg", np.random.default_rng(1).integers(0, 255, (300, 400, 3), dtype=np.uint8))[1].tofile(str(bg))
+    cv2.imencode(".jpg", np.random.default_rng(1).integers(0, 255, (300, 400, 3), dtype=np.uint8))[1].tofile(
+        str(bg)
+    )
     monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(bg), "")))
     for key in window.pages:
         window.show_page(key)
         QTest.qWait(40)
         page = window.pages[key]
         for slider in page.findChildren(SliderRow):
-            for value in (slider._slider.minimum(), slider._slider.maximum(), rng.randint(slider._slider.minimum(), slider._slider.maximum())):
+            for value in (
+                slider._slider.minimum(),
+                slider._slider.maximum(),
+                rng.randint(slider._slider.minimum(), slider._slider.maximum()),
+            ):
                 slider._slider.setValue(value)
         for switch in page.findChildren(SwitchRow):
             if switch.isEnabled():
@@ -168,7 +176,11 @@ def test_studio_handles_bad_files_and_clipboard(window, tmp_path, qapp, errors):
 
 def test_drop_on_window_opens_flow(window, tmp_path, monkeypatch):
     opened = []
-    monkeypatch.setattr(MainWindow, "open_studio", lambda self, kind="mask", person=1, path=None: opened.append((kind, person, path)))
+    monkeypatch.setattr(
+        MainWindow,
+        "open_studio",
+        lambda self, kind="mask", person=1, path=None: opened.append((kind, person, path)),
+    )
     mime = QMimeData()
     mime.setUrls([QUrl.fromLocalFile(str(write_png(tmp_path / "drop.png", "sticker")))])
     event = QDropEvent(QPointF(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
@@ -261,7 +273,9 @@ def test_mirror_modes(window, errors):
     window.mirror_bar.changed.emit("preview")
     wait_for(lambda: window.preview._frame is not None)
     _, raw = window.engine.latest()
-    assert wait_for(lambda: window.preview._frame is not None and np.array_equal(window.preview._frame, raw[:, ::-1]), 6)
+    assert wait_for(
+        lambda: window.preview._frame is not None and np.array_equal(window.preview._frame, raw[:, ::-1]), 6
+    )
     assert not errors
 
 
@@ -325,7 +339,11 @@ def test_person2_calibration_status_updates(window, errors):
 
 def test_drop_on_person2_page_targets_person_two(window, tmp_path, monkeypatch):
     opened = []
-    monkeypatch.setattr(MainWindow, "open_studio", lambda self, kind="mask", person=1, path=None: opened.append((kind, person)))
+    monkeypatch.setattr(
+        MainWindow,
+        "open_studio",
+        lambda self, kind="mask", person=1, path=None: opened.append((kind, person)),
+    )
     window.show_page("person2")
     mime = QMimeData()
     mime.setUrls([QUrl.fromLocalFile(str(write_png(tmp_path / "drop2.png", "sticker")))])

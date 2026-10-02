@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 from dataclasses import dataclass, field
 
 import cv2

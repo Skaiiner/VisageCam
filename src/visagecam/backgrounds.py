@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 import time
 from pathlib import Path
@@ -38,7 +40,9 @@ class BackgroundLibrary:
             scale = MAX_SIDE / longest
             rgb = cv2.resize(rgb, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_AREA)
         target = self.dir / f"bg-{int(time.time() * 1000) % 10**10}.jpg"
-        ok, encoded = cv2.imencode(".jpg", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 92])
+        ok, encoded = cv2.imencode(
+            ".jpg", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 92]
+        )
         if not ok:
             raise ValueError("No se pudo guardar la imagen de fondo")
         encoded.tofile(str(target))

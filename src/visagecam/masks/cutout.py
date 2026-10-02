@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import cv2
 import numpy as np
 
@@ -30,7 +32,9 @@ def _flood_cutout(bgr: np.ndarray) -> np.ndarray | None:
 def _grabcut(bgr: np.ndarray) -> np.ndarray:
     height, width = bgr.shape[:2]
     scale = min(1.0, 512.0 / max(height, width))
-    small = cv2.resize(bgr, (max(2, int(width * scale)), max(2, int(height * scale))), interpolation=cv2.INTER_AREA)
+    small = cv2.resize(
+        bgr, (max(2, int(width * scale)), max(2, int(height * scale))), interpolation=cv2.INTER_AREA
+    )
     sh, sw = small.shape[:2]
     mask = np.zeros((sh, sw), np.uint8)
     rect = (max(1, int(sw * 0.04)), max(1, int(sh * 0.04)), int(sw * 0.92), int(sh * 0.92))

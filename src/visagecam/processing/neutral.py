@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import json
 import logging
 import math
@@ -94,7 +96,9 @@ class NeutralFace:
             self.version += 1
             self._cache.clear()
             try:
-                self.path.write_text(json.dumps({"points": np.round(self.points, 5).tolist()}), encoding="utf-8")
+                self.path.write_text(
+                    json.dumps({"points": np.round(self.points, 5).tolist()}), encoding="utf-8"
+                )
             except OSError:
                 log.exception("No se pudo guardar el rostro neutro")
             log.info("Rostro neutro calibrado")

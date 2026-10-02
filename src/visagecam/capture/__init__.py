@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 from visagecam.capture.camera import (
     RESOLUTIONS,
     CameraCapture,

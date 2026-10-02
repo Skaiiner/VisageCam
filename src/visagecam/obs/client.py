@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import base64
 import hashlib
 import itertools
@@ -73,14 +75,14 @@ class ObsClient:
             if auth:
                 if not self.password:
                     raise ObsError("OBS requiere contrasena")
-                identify["authentication"] = build_auth(
-                    self.password, auth["salt"], auth["challenge"]
-                )
+                identify["authentication"] = build_auth(self.password, auth["salt"], auth["challenge"])
             ws.send(json.dumps({"op": OP_IDENTIFY, "d": identify}))
             try:
                 reply = self._recv_json(ws)
             except ObsError as exc:
-                raise ObsError("OBS rechazo la conexion: revisa la contrasena del servidor WebSocket") from exc
+                raise ObsError(
+                    "OBS rechazo la conexion: revisa la contrasena del servidor WebSocket"
+                ) from exc
             if reply.get("op") != OP_IDENTIFIED:
                 raise ObsError("OBS rechazo la identificacion")
             self.obs_version = str(data.get("obsWebSocketVersion", ""))
@@ -193,8 +195,13 @@ class ObsClient:
             for i in data["sceneItems"]
         ]
 
-    def add_camera_source(self, scene: str, source_name: str = "VisageCam", stream_url: str = "",
-                          tokens: tuple[str, ...] = ("unity video capture", "visagecam")) -> str:
+    def add_camera_source(
+        self,
+        scene: str,
+        source_name: str = "VisageCam",
+        stream_url: str = "",
+        tokens: tuple[str, ...] = ("unity video capture", "visagecam"),
+    ) -> str:
         data = self.request(
             "GetInputPropertiesListPropertyItems",
             {"inputKind": "dshow_input", "propertyName": "video_device_id"},

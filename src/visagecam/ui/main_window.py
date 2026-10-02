@@ -1,8 +1,9 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 from pathlib import Path
 
 import cv2
-
 from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from visagecam import __copyright__, __version__
 from visagecam.backgrounds import BackgroundLibrary
 from visagecam.config import Settings
 from visagecam.masks.library import MaskLibrary
@@ -148,6 +150,14 @@ class MainWindow(QMainWindow):
             col.addWidget(btn, 0, Qt.AlignHCenter)
             btn.clicked.connect(lambda _=False, k=key: self.show_page(k))
         col.addStretch(1)
+        owner = __copyright__.replace("Copyright (c) ", "© ")
+        signature = QLabel(f"v{__version__}\n{owner}")
+        signature.setObjectName("muted")
+        signature.setAlignment(Qt.AlignCenter)
+        signature.setWordWrap(True)
+        signature.setStyleSheet("font-size: 10px;")
+        signature.setToolTip(f"{__copyright__}. Todos los derechos reservados.")
+        col.addWidget(signature)
         return bar
 
     def _build_main(self) -> QWidget:
@@ -174,7 +184,9 @@ class MainWindow(QMainWindow):
         left.setSpacing(12)
         self.preview = PreviewWidget()
         left.addWidget(self.preview, 1)
-        self.mirror_bar = Segmented([("off", "Sin espejo"), ("preview", "Espejo en vista previa"), ("both", "Espejo total")])
+        self.mirror_bar = Segmented(
+            [("off", "Sin espejo"), ("preview", "Espejo en vista previa"), ("both", "Espejo total")]
+        )
         self.mirror_bar.set_value(self.settings.mirror_mode)
         self.mirror_bar.changed.connect(lambda v: self.set_mirror(str(v)))
         left.addWidget(self.mirror_bar)
@@ -216,8 +228,14 @@ class MainWindow(QMainWindow):
     def set_mirror(self, mode: str) -> None:
         self.ctx.set("mirror_mode", mode)
         self.camera.mirror.set_value(mode)
-        self.notify({"off": "Espejo desactivado", "preview": "Espejo solo en la vista previa",
-                     "both": "Espejo en vista previa y salida"}.get(mode, ""), "info")
+        self.notify(
+            {
+                "off": "Espejo desactivado",
+                "preview": "Espejo solo en la vista previa",
+                "both": "Espejo en vista previa y salida",
+            }.get(mode, ""),
+            "info",
+        )
 
     def _mirror_synced(self, mode: str) -> None:
         self.mirror_bar.set_value(mode)
@@ -259,7 +277,7 @@ class MainWindow(QMainWindow):
         else:
             self.accessories.add_and_enable(item.mask_id)
             self.show_page("accessories")
-        self.notify(f"\"{item.name}\" anadido", "ok")
+        self.notify(f'"{item.name}" anadido', "ok")
 
     def dragEnterEvent(self, event) -> None:
         if first_image_path(event.mimeData()) is not None:
@@ -303,7 +321,9 @@ class MainWindow(QMainWindow):
     def _camera_failed(self, message: str) -> None:
         self._starting = False
         self.preview.live = False
-        self.preview.clear(f"{message}\n\nComprueba que la camara esta conectada y que ninguna otra aplicacion la usa.")
+        self.preview.clear(
+            f"{message}\n\nComprueba que la camara esta conectada y que ninguna otra aplicacion la usa."
+        )
 
     def _toggle_virtual(self, checked: bool) -> None:
         if checked:
@@ -333,7 +353,9 @@ class MainWindow(QMainWindow):
         self.virtual_button.setChecked(checked)
         self.virtual_button.blockSignals(False)
         self.virtual_button.setText("Detener camara virtual" if checked else "Iniciar camara virtual")
-        self.virtual_button.setIcon(icon("check" if checked else "play", "#ffffff" if checked else "#0b0d12", 18))
+        self.virtual_button.setIcon(
+            icon("check" if checked else "play", "#ffffff" if checked else "#0b0d12", 18)
+        )
 
     def _tick(self) -> None:
         frame_id, frame = self.engine.latest()
@@ -356,8 +378,14 @@ class MainWindow(QMainWindow):
             self.pill_face.setText(f"{count}/2 rostros")
             set_tone(self.pill_face, "ok" if count == 2 else ("warn" if count == 1 else ""))
         else:
-            wants_face = bool(s.active_mask or s.accessories or s.beauty_smooth or s.beauty_lips
-                              or s.beauty_bright or s.beauty_teeth)
+            wants_face = bool(
+                s.active_mask
+                or s.accessories
+                or s.beauty_smooth
+                or s.beauty_lips
+                or s.beauty_bright
+                or s.beauty_teeth
+            )
             if wants_face:
                 self.pill_face.setText("Rostro detectado" if engine.face_found else "Sin rostro")
                 set_tone(self.pill_face, "ok" if engine.face_found else "warn")

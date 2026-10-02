@@ -4,10 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "visagecam"
-version = "1.5.0"
+version = "1.5.1"
 description = "Camara virtual para Windows con mascaras faciales, accesorios, filtros de belleza y fondos"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
+authors = [{ name = "Skain" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: Other/Proprietary License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+]
 dependencies = [
     "numpy>=1.26,<2",
     "opencv-contrib-python>=4.9",
@@ -39,3 +46,15 @@ pythonpath = ["src", "tests"]
 testpaths = ["tests"]
 addopts = "-q"
 filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["visagecam"]

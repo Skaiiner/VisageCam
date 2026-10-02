@@ -1,6 +1,8 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 import threading
-from typing import Callable
+from collections.abc import Callable
 
 import cv2
 import numpy as np
@@ -23,7 +25,9 @@ def bgra_to_pixmap(bgra: np.ndarray) -> QPixmap:
 def over_checker(bgra: np.ndarray, size: int, cell: int = 14) -> QPixmap:
     height, width = bgra.shape[:2]
     scale = size / max(height, width)
-    small = cv2.resize(bgra, (max(1, int(width * scale)), max(1, int(height * scale))), interpolation=cv2.INTER_AREA)
+    small = cv2.resize(
+        bgra, (max(1, int(width * scale)), max(1, int(height * scale))), interpolation=cv2.INTER_AREA
+    )
     h, w = small.shape[:2]
     yy, xx = np.mgrid[:h, :w]
     board = (((xx // cell) + (yy // cell)) % 2) * 16 + 34

@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import numpy as np
 import pytest
 
@@ -27,19 +29,36 @@ def neutral(isolated_appdata):
     return n
 
 
-@pytest.mark.parametrize("mask_id", [
-    "fox", "robot", "dragon", "cat_astronaut", "alien", "bear",
-    "chrome_knight", "phoenix", "tribal_wolf",
-    "venetian_gold", "butterfly", "feather_noir", "harlequin", "cat_eye_lace",
-])
-@pytest.mark.parametrize("pose", [
-    dict(),
-    dict(rotation=0.5),
-    dict(scale=60, center=(100, 100)),
-    dict(scale=400),
-    dict(center=(-50, 700)),
-    dict(center=(1300, -20), open_=0.2),
-])
+@pytest.mark.parametrize(
+    "mask_id",
+    [
+        "fox",
+        "robot",
+        "dragon",
+        "cat_astronaut",
+        "alien",
+        "bear",
+        "chrome_knight",
+        "phoenix",
+        "tribal_wolf",
+        "venetian_gold",
+        "butterfly",
+        "feather_noir",
+        "harlequin",
+        "cat_eye_lace",
+    ],
+)
+@pytest.mark.parametrize(
+    "pose",
+    [
+        dict(),
+        dict(rotation=0.5),
+        dict(scale=60, center=(100, 100)),
+        dict(scale=400),
+        dict(center=(-50, 700)),
+        dict(center=(1300, -20), open_=0.2),
+    ],
+)
 def test_masks_render_in_every_pose(library, neutral, mask_id, pose):
     frame = make_frame()
     mask = library.get(mask_id)
@@ -148,7 +167,12 @@ def test_pipeline_ignores_garbage_landmarks(library, monkeypatch):
     class Garbage(StubTracker):
         def process(self, frame, scale=1.0):
             self.frame += 1
-            return [None, np.full((468, 2), np.nan, np.float32), np.zeros((468, 2), np.float32), live_face(scale=1e6)][self.frame % 4]
+            return [
+                None,
+                np.full((468, 2), np.nan, np.float32),
+                np.zeros((468, 2), np.float32),
+                live_face(scale=1e6),
+            ][self.frame % 4]
 
     monkeypatch.setattr(pipeline_module, "FaceTracker", Garbage)
     s = Settings()
@@ -178,7 +202,9 @@ def test_covering_masks_hide_real_eyes(library, neutral):
     mask = library.get("alien")
     frame = make_frame(color=(40, 40, 200))
     face = live_face()
-    OverlayRenderer().draw(frame, mask, face, Settings(), expression=(FaceWarpRenderer(), neutral.canonical_for(mask)))
+    OverlayRenderer().draw(
+        frame, mask, face, Settings(), expression=(FaceWarpRenderer(), neutral.canonical_for(mask))
+    )
     eye = face[[33, 133, 159, 145]].mean(axis=0).astype(int)
     patch = frame[eye[1] - 3 : eye[1] + 4, eye[0] - 3 : eye[0] + 4].astype(int)
     assert np.abs(patch - np.array([40, 40, 200])).mean() > 30
@@ -333,7 +359,9 @@ def test_distortion_combines_with_mask(library, neutral):
     frame = make_frame()
     DistortionRenderer().draw(frame, face, pipeline_profile)
     before_mask = frame.copy()
-    OverlayRenderer().draw(frame, mask, face, pipeline_profile, expression=(FaceWarpRenderer(), neutral.canonical_for(mask)))
+    OverlayRenderer().draw(
+        frame, mask, face, pipeline_profile, expression=(FaceWarpRenderer(), neutral.canonical_for(mask))
+    )
     assert changed(before_mask, frame) > 0.3
 
 

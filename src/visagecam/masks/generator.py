@@ -1,9 +1,10 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import argparse
 import logging
 from pathlib import Path
 
-from visagecam.masks.accessories import ACCESSORIES
-from visagecam.masks.designs import ANCHORS, DESIGNS
+from visagecam.masks.catalog import ACCESSORIES, ANCHORS, DESIGNS
 from visagecam.masks.storage import write_mask
 
 log = logging.getLogger(__name__)
@@ -41,8 +42,15 @@ def generate_accessories(directory: Path, only: list[str] | None = None) -> list
         log.info("Generando accesorio %s", acc_id)
         written.append(
             write_mask(
-                directory, acc_id, spec.name, spec.builder(), [],
-                kind="accessory", slot=spec.slot, pivot=spec.pivot, width_ratio=spec.width_ratio,
+                directory,
+                acc_id,
+                spec.name,
+                spec.builder(),
+                [],
+                kind="accessory",
+                slot=spec.slot,
+                pivot=spec.pivot,
+                width_ratio=spec.width_ratio,
             )
         )
     (directory / ".version").write_text(GENERATOR_VERSION, encoding="utf-8")

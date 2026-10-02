@@ -1,5 +1,7 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import math
-from typing import Iterable
+from collections.abc import Iterable
 
 import numpy as np
 from PySide6.QtCore import (
@@ -217,7 +219,9 @@ class Segmented(QFrame):
 
     def __init__(self, options: Iterable[tuple[object, str]]) -> None:
         super().__init__()
-        self.setStyleSheet(f"QFrame {{ background: {COLORS['surface']}; border: 1px solid {COLORS['border']}; border-radius: 11px; }}")
+        self.setStyleSheet(
+            f"QFrame {{ background: {COLORS['surface']}; border: 1px solid {COLORS['border']}; border-radius: 11px; }}"
+        )
         row = QHBoxLayout(self)
         row.setContentsMargins(3, 3, 3, 3)
         row.setSpacing(2)
@@ -249,8 +253,16 @@ class Segmented(QFrame):
 class SliderRow(QWidget):
     changed = Signal(float)
 
-    def __init__(self, label: str, minimum: float, maximum: float, value: float,
-                 step: float = 1.0, suffix: str = "", decimals: int = 0) -> None:
+    def __init__(
+        self,
+        label: str,
+        minimum: float,
+        maximum: float,
+        value: float,
+        step: float = 1.0,
+        suffix: str = "",
+        decimals: int = 0,
+    ) -> None:
         super().__init__()
         from PySide6.QtWidgets import QSlider
 
@@ -333,7 +345,11 @@ class TileDelegate(QStyledItemDelegate):
         font.setWeight(QFont.Medium)
         painter.setFont(font)
         text_rect = QRectF(rect.left() + 6, rect.bottom() - 30, rect.width() - 12, 24)
-        painter.drawText(text_rect, Qt.AlignHCenter | Qt.AlignVCenter, painter.fontMetrics().elidedText(name, Qt.ElideRight, int(text_rect.width())))
+        painter.drawText(
+            text_rect,
+            Qt.AlignHCenter | Qt.AlignVCenter,
+            painter.fontMetrics().elidedText(name, Qt.ElideRight, int(text_rect.width())),
+        )
         if checked:
             badge = QRectF(rect.right() - 26, rect.top() + 7, 20, 20)
             grad = QLinearGradient(badge.topLeft(), badge.bottomRight())
@@ -380,7 +396,9 @@ class Gallery(QListWidget):
         if current is not None:
             self.selected.emit(current.data(ID_ROLE))
 
-    def set_items(self, entries: Iterable[tuple[str, str, QPixmap, bool]], checked: Iterable[str] = ()) -> None:
+    def set_items(
+        self, entries: Iterable[tuple[str, str, QPixmap, bool]], checked: Iterable[str] = ()
+    ) -> None:
         active = set(checked)
         self.blockSignals(True)
         self.clear()
@@ -473,7 +491,12 @@ class PreviewWidget(QWidget):
         p.fillPath(clip, QColor("#0a0c10"))
         if self._image is not None:
             size = self._image.size().scaled(self.size(), Qt.KeepAspectRatio)
-            target = QRect((self.width() - size.width()) // 2, (self.height() - size.height()) // 2, size.width(), size.height())
+            target = QRect(
+                (self.width() - size.width()) // 2,
+                (self.height() - size.height()) // 2,
+                size.width(),
+                size.height(),
+            )
             p.drawImage(target, self._image)
         else:
             p.setPen(QColor(COLORS["muted"]))
@@ -520,7 +543,12 @@ class Toast(QLabel):
         self._timer.timeout.connect(self._hide)
 
     def show_message(self, text: str, tone: str = "info", ms: int = 3200) -> None:
-        colors = {"info": COLORS["accent"], "ok": COLORS["ok"], "warn": COLORS["warn"], "error": COLORS["danger"]}
+        colors = {
+            "info": COLORS["accent"],
+            "ok": COLORS["ok"],
+            "warn": COLORS["warn"],
+            "error": COLORS["danger"],
+        }
         self.setStyleSheet(
             f"background: {COLORS['card_hi']}; color: {COLORS['text']}; border: 1px solid {colors.get(tone, COLORS['accent'])};"
             "border-radius: 12px; padding: 10px 16px; font-weight: 500;"

@@ -22,11 +22,11 @@ Webcam ──► capture ──► engine ──► processing.pipeline ──�
 | Paquete | Responsabilidad |
 | --- | --- |
 | `capture` | Enumeracion de camaras y captura con hilo dedicado. |
-| `processing` | Seguimiento facial, deformacion por malla, superposiciones, belleza, fondo, mejora de imagen y motor. |
-| `masks` | Modelo de mascara, almacenamiento JSON/PNG, biblioteca, importacion de imagenes, recorte de fondo y generacion por codigo. |
+| `processing` | Seguimiento facial (una o dos personas), deformacion por malla, superposiciones, belleza, deformaciones en vivo, fondo, mejora de imagen y motor. |
+| `masks` | Modelo de mascara, almacenamiento JSON/PNG, biblioteca, importacion de imagenes, recorte de fondo y generador. El subpaquete `catalog` agrupa los disenos incluidos: `creatures`, `robots`, `masquerade` y `accessories`. |
 | `output` | Camara virtual (`pyvirtualcam`) y servidor MJPEG. |
 | `obs` | Cliente OBS WebSocket v5. |
-| `ui` | Interfaz PySide6: tema, componentes, paginas, estudio de imagenes y ventana principal. |
+| `ui` | Interfaz PySide6: tema, iconos, componentes, estudio de imagenes y ventana principal. El subpaquete `pages` contiene un modulo por pagina. |
 | raiz | `app.py` (arranque), `config.py` (configuracion persistente), `logging_setup.py`, `backgrounds.py`. |
 
 ## Como se renderiza una mascara

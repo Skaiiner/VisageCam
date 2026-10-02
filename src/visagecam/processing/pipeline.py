@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -66,7 +68,9 @@ class FramePipeline:
 
         small, factor = frame, 1.0
         if (need_track or need_bg) and width > ANALYSIS_WIDTH:
-            small = cv2.resize(frame, (ANALYSIS_WIDTH, int(height * ANALYSIS_WIDTH / width)), interpolation=cv2.INTER_AREA)
+            small = cv2.resize(
+                frame, (ANALYSIS_WIDTH, int(height * ANALYSIS_WIDTH / width)), interpolation=cv2.INTER_AREA
+            )
             factor = width / ANALYSIS_WIDTH
         if need_track or need_bg or amount > 0.01:
             self._enhancer.prepare(small, amount)
@@ -175,7 +179,9 @@ class FramePipeline:
             results[slot] = (profiles[slot], landmarks, neutrals[slot])
         return results
 
-    def _apply_profile(self, frame: np.ndarray, profile: FilterProfile, landmarks: np.ndarray, neutral: NeutralFace) -> None:
+    def _apply_profile(
+        self, frame: np.ndarray, profile: FilterProfile, landmarks: np.ndarray, neutral: NeutralFace
+    ) -> None:
         mask = self.library.get(profile.active_mask) if profile.active_mask else None
         extras = [a for a in (self.library.get(i) for i in profile.accessories) if a is not None]
         if BeautyRenderer.active(profile):
@@ -189,7 +195,9 @@ class FramePipeline:
                 self._guard("mascara", self._draw_mask, frame, mask, landmarks, profile, neutral)
         for accessory in extras:
             values = profile.accessory_adjust.get(accessory.mask_id, DEFAULT_ADJUST)
-            self._guard("accesorio", self._overlay.draw, frame, accessory, landmarks, profile, tuple(values), 1.0)
+            self._guard(
+                "accesorio", self._overlay.draw, frame, accessory, landmarks, profile, tuple(values), 1.0
+            )
 
     def _backdrop(self, small: np.ndarray, size: tuple[int, int]):
         backdrop = self._background.backdrop(small, self.settings, size)
@@ -198,7 +206,9 @@ class FramePipeline:
         person = self._background.mask(small)
         return backdrop, cv2.resize(person, size, interpolation=cv2.INTER_LINEAR)
 
-    def _draw_mask(self, frame: np.ndarray, mask, landmarks: np.ndarray, profile: FilterProfile, neutral: NeutralFace) -> None:
+    def _draw_mask(
+        self, frame: np.ndarray, mask, landmarks: np.ndarray, profile: FilterProfile, neutral: NeutralFace
+    ) -> None:
         canon = neutral.canonical_for(mask) if profile.expression else None
         expression = (self._face, canon) if canon is not None else None
         self._overlay.draw(frame, mask, landmarks, profile, expression=expression)

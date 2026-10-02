@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Skain. Todos los derechos reservados.
+
 import logging
 import sys
 import traceback
@@ -54,5 +56,9 @@ def main() -> int:
         return app.exec()
     except Exception:
         log.exception("Error fatal en la aplicacion")
-        QMessageBox.critical(None, "VisageCam", "Se produjo un error inesperado. Revisa el registro en %APPDATA%\\VisageCam\\logs.")
+        QMessageBox.critical(
+            None,
+            "VisageCam",
+            "Se produjo un error inesperado. Revisa el registro en %APPDATA%\\VisageCam\\logs.",
+        )
         return 1
