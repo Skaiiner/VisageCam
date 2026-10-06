@@ -118,6 +118,6 @@ El repositorio incluye un hook de git (`scripts/hooks/post-commit`) que sube cad
 
 ## Autor y derechos
 
-Copyright (c) 2026 Skain. Todos los derechos reservados. Consulta el archivo [LICENSE](LICENSE).
+Copyright (c) 2026 Skaiiner. Todos los derechos reservados. Consulta el archivo [LICENSE](LICENSE).
 
 Para cambiar el titular en todos los archivos a la vez: `python scripts/set_author.py "Tu nombre"`.

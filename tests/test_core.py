@@ -1,4 +1,4 @@
-# Copyright (c) 2026 Skain. Todos los derechos reservados.
+# Copyright (c) 2026 Skaiiner. Todos los derechos reservados.
 
 import json
 
@@ -284,7 +284,7 @@ def test_every_python_file_carries_the_copyright_header():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    header = "# Copyright (c) 2026 Skain. Todos los derechos reservados."
+    header = "# Copyright (c) 2026 Skaiiner. Todos los derechos reservados."
     files = [f for folder in ("src", "tests", "scripts") for f in (root / folder).rglob("*.py")]
     missing = [
         str(f)
@@ -300,12 +300,12 @@ def test_authorship_metadata_is_consistent():
     import visagecam
 
     root = Path(__file__).resolve().parents[1]
-    assert visagecam.__author__ == "Skain"
-    assert visagecam.__copyright__ == "Copyright (c) 2026 Skain"
-    assert "Copyright (c) 2026 Skain. Todos los derechos reservados." in (root / "LICENSE").read_text(
+    assert visagecam.__author__ == "Skaiiner"
+    assert visagecam.__copyright__ == "Copyright (c) 2026 Skaiiner"
+    assert "Copyright (c) 2026 Skaiiner. Todos los derechos reservados." in (root / "LICENSE").read_text(
         encoding="utf-8"
     )
-    assert 'name = "Skain"' in (root / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'name = "Skaiiner"' in (root / "pyproject.toml").read_text(encoding="utf-8")
 
 
 def test_set_author_script_is_idempotent(tmp_path):
@@ -319,8 +319,8 @@ def test_set_author_script_is_idempotent(tmp_path):
     spec.loader.exec_module(module)
     sample = tmp_path / "sample.py"
     sample.write_text("import os\n", encoding="utf-8")
-    assert module.apply_header(sample, "Skain", 2026) is True
-    assert module.apply_header(sample, "Skain", 2026) is False
+    assert module.apply_header(sample, "Skaiiner", 2026) is True
+    assert module.apply_header(sample, "Skaiiner", 2026) is False
     assert module.apply_header(sample, "Otro Nombre", 2027) is True
     assert (
         sample.read_text(encoding="utf-8").splitlines()[0]

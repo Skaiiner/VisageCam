@@ -1,1 +1,1 @@
-# Copyright (c) 2026 Skain. Todos los derechos reservados.
+# Copyright (c) 2026 Skaiiner. Todos los derechos reservados.

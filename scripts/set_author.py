@@ -1,4 +1,4 @@
-# Copyright (c) 2026 Skain. Todos los derechos reservados.
+# Copyright (c) 2026 Skaiiner. Todos los derechos reservados.
 
 import argparse
 import re
@@ -47,7 +47,7 @@ def replace_in(path: Path, pattern: str, replacement: str) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fija el titular de los derechos de autor del proyecto")
-    parser.add_argument("owner", help="nombre del titular, por ejemplo: Skain")
+    parser.add_argument("owner", help="nombre del titular, por ejemplo: Skaiiner")
     parser.add_argument("--year", type=int, default=YEAR)
     args = parser.parse_args()
     changed = [str(f.relative_to(ROOT)) for f in python_files() if apply_header(f, args.owner, args.year)]

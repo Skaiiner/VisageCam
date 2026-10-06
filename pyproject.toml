@@ -8,7 +8,7 @@ version = "1.6.0"
 description = "Camara virtual para Windows con mascaras faciales, accesorios, filtros de belleza y fondos"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
-authors = [{ name = "Skain" }]
+authors = [{ name = "Skaiiner" }]
 license = { file = "LICENSE" }
 classifiers = [
     "License :: Other/Proprietary License",
